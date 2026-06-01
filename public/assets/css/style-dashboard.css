@@ -1,0 +1,1878 @@
+@charset "UTF-8";
+
+/* Reset standar agar tidak ada jarak bawaan browser */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+}
+
+/* Membagi layar menjadi kolom (Flexbox) */
+.main-wrapper {
+    display: flex;
+    height: 100vh; /* Memenuhi tinggi layar penuh */
+}
+
+/* SIDEBAR STYLING */
+/* Sidebar: Lebar tetap di kiri */
+.sidebar {
+    /* update tutup by dean 03052026 */
+    /* width: 331px; Sesuai ukuran Figma kamu */
+    width: 260px;
+    background: white;
+    /* Ganti border agar lebih halus */
+    border-right: 1px solid #f0f0f0;
+    padding: 24px 16px; /* Padding atas & bawah agar logo tidak terlalu mepet ke atas */
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Memberi jarak antar menu agar tidak rapat */
+    /* update tutup by dean 03052026 */
+    /* min-width: 331px; */
+}
+
+/* Logo Section */
+.logo-section {
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 48px; /* Jarak besar antara logo dan menu pertama */
+}
+
+.logo-circle {
+    width: 40px;
+    height: 40px;
+    background: #b7b89f; /* Warna tema MiniBank */
+    border-radius: 50%;
+    margin-right: 16px; /* Memberikan jarak ke elemen di sebelah kanannya */
+}
+
+.logo-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
+
+/* Menu List */
+.menu-list {
+    display: flex;
+    flex-direction: column;
+    padding: 0 24px;
+    gap: 8px; /* Jarak antar item menu */
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    text-decoration: none;
+    /* Gunakan warna abu-abu lembut agar lebih modern */
+    color: #666;
+    font-weight: 500;
+    border-radius: 10px; /* Membuat sudut lebih bulat/modern */
+    transition: all 0.3s ease; /* Agar transisi warna halus */
+}
+
+/* Ikon di dalam Menu */
+.menu-item i {
+    font-size: 18px;
+    width: 24px; /* Memberikan lebar tetap agar teks Dashboard dkk sejajar */
+    text-align: center;
+}
+
+/* State: Hover & Active */
+.menu-item:hover {
+    /* update by dean 03052026 */
+    background-color: #f8f9fa;
+    color: #1a1a1a;
+    /* Efek geser sedikit ke kanan (sangat tren di UI 2026) */
+    padding-left: 20px;
+}
+
+/* Warna menu saat aktif */
+/* .menu-item.active {
+    /* update by dean 03052026 */
+/* background: rgba(183, 184, 159, 0.15); Warna tema 15% opacity */
+/* color: #b7b89f; */
+/* } */
+
+/* Label Menu (GENERAL) */
+.menu-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #999;
+    margin: 24px 0 8px 16px;
+    letter-spacing: 1px;
+}
+
+/* Area Kanan: Mengambil sisa ruang layar */
+.main-content-area {
+    flex: 1; /* Ini kunci agar dia memenuhi sisa layar */
+    display: flex;
+    flex-direction: column; /* Menyusun Top Nav di atas, Content di bawah */
+    background-color: #f8f9fa;
+}
+
+/* Top Nav: Barisan paling atas di area kanan */
+.top-nav {
+    height: 70px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #eee;
+    padding: 0 40px;
+    display: flex;
+    align-items: center; /* Meratakan isi nav secara vertikal */
+    justify-content: space-between; /* Kiri (Search) & Kanan (User) */
+}
+
+/* Grup Kanan */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 32px; /* Jarak antara notifikasi dan profil user */
+}
+
+/* Notifikasi */
+.notification-box {
+    position: relative;
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+}
+
+.dot-indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    background: #ff6b6b; /* Warna merah untuk tanda notifikasi */
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+/* 1. Induk Profil User */
+.user-profile {
+    position: relative; /* KUNCI: Menjadi patokan posisi untuk menu di dalamnya */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+/* 2. Kotak Menu */
+.profile-menu {
+    position: absolute; /* KUNCI: Membuat menu melayang */
+    top: 100%; /* Tepat di bawah profil */
+    right: 0; /* Rata kanan dengan profil */
+    margin-top: 10px; /* Memberi sedikit jarak dari profil */
+
+    width: 200px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e0e4ec;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+
+    /* Tahap Awal: Sembunyikan */
+    display: none;
+    flex-direction: column;
+    padding: 8px;
+    z-index: 1000; /* Memastikan menu di atas elemen lain */
+}
+
+/* --- 3. Class "Show" (Akan dipicu oleh JavaScript nanti) --- */
+.profile-menu.show {
+    display: flex; /* Mengubah dari 'none' menjadi 'flex' agar muncul */
+}
+
+/* 4. Styling Item di Dalam Menu */
+.profile-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    text-decoration: none;
+    color: #444;
+    font-size: 14px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.profile-menu a:hover {
+    background: #f5f5f5;
+}
+/* .profile-menu a.logout { color: #e74c3c; } */
+
+.user-profile:hover {
+    background: #f9f9f9;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    background: #b7b89f; /* Warna tema MiniBank */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column; /* Nama di atas, Role di bawah */
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+}
+
+.user-role {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.dropdown-icon {
+    font-size: 12px;
+    color: #999;
+    margin-left: 4px;
+}
+
+.search-wrapper {
+    display: flex; /* Mengaktifkan mode flex */
+    align-items: center; /* KUNCI UTAMA: Menyejajarkan semua elemen di dalamnya secara vertikal ke tengah */
+    background: #f5f5f5;
+    padding: 8px 16px;
+    border-radius: 8px;
+    width: 350px;
+}
+
+.search-icon {
+    color: #888;
+    font-size: 14px;
+    /* Hapus margin-top/bottom jika ada, cukup gunakan margin-right untuk jarak ke teks */
+    margin-right: 12px;
+    display: flex; /* Memastikan ikon Font Awesome sendiri berada di tengah box-nya */
+    align-items: center;
+}
+
+.search-input {
+    flex: 1; /* Membuat input mengambil sisa ruang yang tersedia */
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    /* Pastikan tidak ada height manual yang terlalu besar pada input */
+    line-height: normal;
+}
+
+/* MAIN CONTENT STYLING */
+
+/* --- REFINED TYPOGRAPHY --- */
+
+.header-text h2 {
+    font-size: 32px; /* Sedikit lebih besar untuk layar retina */
+    font-weight: 800; /* Extra Bold untuk kesan tegas */
+    color: #1a1d1f; /* Hitam pekat yang elegan */
+    letter-spacing: -1px; /* Merapatkan huruf agar terlihat modern/minimalis */
+    margin-bottom: 4px;
+}
+
+.header-text p {
+    font-size: 16px;
+    font-weight: 500;
+    color: #6f767e; /* Abu-abu lembut agar kontras dengan judul */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Efek khusus untuk nama Admin */
+.highlight-user {
+    background: linear-gradient(90deg, #b7b89f, #96977d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    position: relative;
+}
+
+/* Opsional: Menambahkan icon melambaikan tangan */
+.header-text p::after {
+    content: "\1F44B"; /* Ini adalah kode hex untuk emoji 👋 */
+    font-size: 18px;
+    margin-left: 8px; /* Tambahkan sedikit jarak agar tidak menempel ke teks */
+}
+
+/* Container Utama Header */
+.content-header {
+    display: flex;
+    justify-content: space-between; /* Menjauhkan judul (kiri) dan tombol (kanan) */
+    align-items: center; /* Menyeimbangkan posisi atas-bawah */
+    padding: 20px;
+    margin-bottom: 10px;
+}
+
+/* Merapikan Teks Judul */
+.header-title-wrapper h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px; /* Jarak ke sub-judul di bawahnya */
+}
+
+.header-title-wrapper p {
+    font-size: 14px;
+    color: #777;
+    margin: 0;
+}
+
+/* update tutup by dean 04052026 */
+/* .content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    /* Tambahkan margin bawah secara spesifik */
+/* margin-bottom: 24px;  */
+/* flex-shrink: 0; */
+/* } */
+
+.content {
+    padding: 40px; /* Memberikan ruang napas di seluruh sisi konten */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Agar jika konten panjang, hanya area ini yang scroll */
+    /* Ubah gap menjadi lebih besar, misal 40px atau 48px */
+    gap: 40px;
+    background-color: #f8f9fa;
+}
+
+/* STATS GRID STYLING */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(
+        4,
+        1fr
+    ); /* Membagi menjadi 4 kolom yang sama lebar */
+    gap: 24px; /* Jarak antar kartu */
+    margin-bottom: 40px;
+}
+
+/* Update tutup by dean 03052026 */
+/* .stat-grid {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+
+    /* Tambahkan border yang jelas namun tetap halus */
+/* border: 1px solid #E0E4EC; */
+/* display: flex; */
+/* justify-content: space-between; */
+/* align-items: center; Kunci agar icon dan teks sejajar secara vertikal */
+/* gap: 20px;           Jarak antara ikon dan blok teks */
+
+/* Transisi yang lebih lambat dan menggunakan cubic-bezier agar lebih smooth */
+/* transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); */
+/* cursor: pointer; */
+/* } */
+
+.stat-card {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid #e0e4ec;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* Sekarang cukup gunakan display block atau flex column */
+    display: flex;
+    flex-direction: column;
+}
+
+.value-container {
+    display: flex;
+    align-items: center; /* Menyejajarkan angka dan ikon di tengah secara vertikal */
+    justify-content: space-between; /* Mendorong angka ke kiri dan ikon ke kanan */
+    margin: 8px 0 4px 0;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px); /* Efek melayang saat di-hover */
+    border-color: #b7b89f; /* Border berubah ke warna tema saat hover */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* Mengatur blok teks agar tetap rapi di samping ikon */
+.stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Detail Teks di dalam Kartu */
+.stat-label {
+    font-size: 13px;
+    color: #888;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    /* margin: 8px 0 4px 0; */
+    line-height: 1; /* Menghilangkan ruang kosong ekstra di atas/bawah teks */
+}
+
+/* Styling Ikon di Samping */
+.stat-icon-box {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    flex-shrink: 0; /* Mencegah ikon gepeng */
+}
+
+.stat-desc {
+    font-size: 12px;
+    color: #999;
+}
+
+.text-up {
+    color: #2ecc71; /* Warna hijau untuk tren naik */
+    font-weight: 600;
+}
+
+/* Variasi Warna Ikon (Sesuai Tema Profesional) */
+.bg-blue {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+.bg-green {
+    background-color: rgba(46, 204, 113, 0.1);
+    color: #2ecc71;
+}
+.bg-gold {
+    background-color: rgba(241, 196, 15, 0.1);
+    color: #f1c40f;
+}
+.bg-red {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+/* CONTAINER AREA */
+.activity-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e0e4ec;
+    padding: 24px;
+    height: 100%; /* Agar tingginya menyesuaikan jika di taruh di samping tabel */
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.activity-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.activity-header i {
+    color: #999;
+    font-size: 18px;
+}
+
+/* LIST AKTIVITAS */
+.activity-list {
+    list-style: none; /* Menghilangkan titik bullet default */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start; /* Ikon tetap di atas jika teksnya panjang */
+    gap: 16px;
+    position: relative;
+}
+
+/* Garis penghubung antar aktivitas (opsional untuk kesan timeline) */
+.activity-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 20px;
+    top: 45px;
+    bottom: -15px;
+    width: 2px;
+    background: #f0f0f0;
+}
+
+/* --- ICON STYLING --- */
+.activity-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    flex-shrink: 0; /* Mencegah ikon gepeng */
+    z-index: 1;
+}
+
+/* --- DETAIL TEKS --- */
+.activity-detail p {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.activity-detail p strong {
+    color: #1a1d1f;
+    font-weight: 600;
+}
+
+.activity-detail p span {
+    color: #b7b89f; /* Warna tema MiniBank */
+    font-weight: 600;
+}
+
+.activity-detail small {
+    font-size: 12px;
+    color: #999;
+}
+
+/* --- VARIASI WARNA BACKGROUND IKON --- */
+.bg-blue {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+.bg-green {
+    background-color: rgba(46, 204, 113, 0.1);
+    color: #2ecc71;
+}
+.bg-gold {
+    background-color: rgba(241, 196, 15, 0.1);
+    color: #f1c40f;
+}
+
+/* --- TABLE SECTION STYLING --- */
+.table-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e0e4ec;
+    padding: 24px;
+
+    /* Update tutup by dean 03052026 */
+    /* width: 100%;       Memastikan mengisi seluruh lebar konten */
+    /* max-width: 1200px; Opsional: Agar tidak terlalu lebar di layar MacBook 16 */
+    /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); Menambah kesan premium */
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.table-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.view-all-btn {
+    font-size: 13px;
+    color: #b7b89f;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Base Table Styling */
+.data-table {
+    width: 100%;
+    border-collapse: collapse; /* Menghilangkan double border pada tabel */
+}
+
+.data-table th {
+    text-align: left;
+    font-size: 14px;
+    color: #999;
+    font-weight: 600;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    letter-spacing: 0.5px;
+    /* background-color: yellow !important; Tes apakah warna header berubah jadi kuning */
+}
+
+.data-table td {
+    padding: 12px 15px;
+    font-size: 14px;
+    color: #444;
+    border-bottom: 1px solid #f9f9f9;
+}
+
+/* Student Info (Avatar + Nama) */
+.student-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.student-img {
+    width: 32px;
+    height: 32px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #b7b89f;
+}
+
+/* Status Badge */
+.badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.badge.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.badge.warning {
+    background: #fff3e0;
+    color: #ef6c00;
+}
+
+/* Alignment & Colors */
+.text-right {
+    text-align: right;
+}
+.amount-in {
+    color: #2e7d32;
+    font-weight: 600;
+}
+.amount-out {
+    color: #d32f2f;
+    font-weight: 600;
+}
+
+/* Styling tambahan untuk tombol tambah agar menonjol */
+.btn-add {
+    background-color: #b7b89f; /* Sesuaikan dengan warna tema dashboard */
+    color: white;
+    padding: 0 20px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap; /* Mencegah teks turun ke bawah */
+}
+btn- .btn-add:hover {
+    background-color: #a5a68d;
+}
+
+/* Berikan jarak pada area section */
+.data-section {
+    padding: 20px;
+}
+
+/* Membuat kotak putih untuk table */
+.table-container {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Shadow tipis agar modern */
+    border: 1px solid #f0f0f0;
+}
+
+.master-table {
+    width: 100%;
+    border-collapse: collapse; /* Menghilangkan jarak antar garis cell */
+    margin-top: 10px;
+}
+
+/* Mengatur baris judul (Header) */
+.master-table th {
+    text-align: left;
+    padding: 15px;
+    background-color: #f8f9fa;
+    color: #666;
+    font-weight: 600;
+    border-bottom: 2px solid #eee;
+}
+
+/* Mengatur baris isi data (Cells) */
+.master-table td {
+    padding: 15px;
+    border-bottom: 1px solid #f9f9f9;
+    color: #333;
+    font-size: 14px;
+}
+
+/* Gaya umum untuk semua tombol di dalam tabel */
+.master-table button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s ease; /* Efek halus saat di-hover */
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-active {
+    background-color: #e8f5e9; /* Hijau muda */
+    color: #2e7d32; /* Hijau tua */
+}
+
+/* Wadah agar tombol Edit dan Hapus berjajar rapi */
+.action-buttons {
+    display: flex;
+    gap: 8px; /* Memberi jarak antar tombol */
+}
+
+/* Tombol View */
+.btn-view {
+    background-color: #f0f4f8; /* Biru abu-abu sangat muda */
+    color: #546e7a; /* Abu-abu gelap kebiruan */
+}
+
+.btn-view:hover {
+    background-color: #546e7a;
+    color: white;
+}
+
+/* Tombol Edit */
+.btn-edit {
+    background-color: #e3f2fd; /* Biru sangat muda */
+    color: #2196f3; /* Biru tajam */
+}
+
+.btn-edit:hover {
+    background-color: #2196f3;
+    color: white;
+}
+
+/* Tombol Hapus */
+.btn-danger {
+    background-color: #ffebee; /* Merah sangat muda */
+    color: #f44336; /* Merah tajam */
+}
+
+.btn-danger:hover {
+    background-color: #f44336;
+    color: white;
+}
+
+/* Container Utama: Membagi area kiri dan kanan */
+.table-controls {
+    display: flex;
+    justify-content: space-between; /* Menjauhkan pencarian (kiri) dan tombol (kanan) */
+    align-items: center;
+    width: 100%;
+    padding: 0 20px;
+    margin-bottom: 20px;
+}
+
+/* Grup Aksi: Memaksa semua tombol di kanan untuk rapat berdampingan */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Jarak antara grup filter dan tombol tambah murid */
+}
+
+/* Memastikan filter-group tetap berjajar */
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Jarak antara dropdown dan tombol filter */
+}
+
+/* Menyamakan tinggi semua elemen aksi agar simetris (40px) */
+.dropdown-selected,
+.btn-filter,
+.btn-add {
+    height: 40px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+/* Bagian Filter di sisi kanan */
+/* Menghias Kotak Dropdown */
+.filter-group select {
+    padding: 10px 35px 10px 15px; /* Ruang lebih di kanan untuk panah kustom */
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #ffffff;
+    color: #444;
+    font-size: 14px;
+    font-family: "Inter", sans-serif;
+    cursor: pointer;
+    appearance: none; /* Menghilangkan panah bawaan browser */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 12px) center; /* Posisi panah kustom */
+    transition: all 0.3s ease;
+}
+
+/* Efek saat Dropdown diklik */
+.filter-group select:focus {
+    outline: none;
+    border-color: #b7b89f;
+    box-shadow: 0 0 0 3px rgba(183, 184, 159, 0.1);
+}
+
+/* Class untuk memunculkan menu (akan dipicu JS) */
+.custom-dropdown.active .dropdown-options {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-options li {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.dropdown-options li:hover {
+    background-color: #f5f5f5;
+    color: #b7b89f; /* Warna tema kamu */
+}
+
+/* Animasi Ikon Panah */
+.custom-dropdown.active .fa-chevron-down {
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
+}
+
+.search-box {
+    position: relative;
+    width: 300px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 15px 12px 45px; /* Padding kiri lebih besar untuk ikon */
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #b7b89f; /* Warna tema MiniBank kamu */
+}
+
+/* Gaya untuk Dropdown Kelas */
+.filter-group select {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: white;
+    color: #444;
+    cursor: pointer;
+}
+
+/* Base Style untuk Dropdown & Button agar tinggi SAMA */
+.dropdown-selected,
+.btn-filter {
+    height: 40px;
+    padding: 0 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-family: "Inter", sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    box-sizing: border-box; /* Menjamin border tidak menambah tinggi */
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+/* Spesifik Dropdown */
+.custom-dropdown {
+    position: relative;
+    width: 180px;
+}
+
+.dropdown-selected {
+    background-color: #fff;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* Spesifik Tombol Filter */
+.btn-filter {
+    background-color: #f4f4f4;
+    color: #444;
+    font-weight: 600;
+    gap: 8px;
+}
+
+.btn-filter:hover {
+    background-color: #e0e0e0;
+}
+
+/* Style untuk List Pilihan (Menu yang muncul) */
+.dropdown-options {
+    position: absolute;
+    top: 45px;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    list-style: none;
+    padding: 5px;
+    margin: 0;
+    z-index: 100;
+    display: none; /* Awalnya sembunyi */
+}
+
+/* Menampilkan menu saat aktif */
+.custom-dropdown.active .dropdown-options {
+    display: block;
+}
+
+.dropdown-options li {
+    padding: 10px;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.dropdown-options li:hover {
+    background: #f5f5f5;
+}
+
+/* untuk bagian form murid */
+.form-card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.form-header {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+.form-header-murid {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+/* Mengatur input agar berjajar 2 kolom di layar lebar */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: "Inter", sans-serif;
+}
+
+/* Mengatur Tombol Aksi */
+.form-actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-save {
+    background-color: #b7b89f; /* Warna tema kamu */
+    color: white;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background-color: #f8f9fa;
+    color: #666;
+    padding: 10px 25px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ============================================================
+   PERBAIKAN STYLING RADIO BUTTON (GENDER)
+   ============================================================ */
+
+/* Memastikan container radio berbaris ke samping dengan rapi */
+.radio-group {
+    display: flex;
+    align-items: center; /* KUNCI UTAMA: Menyejajarkan item secara vertikal di tengah */
+    gap: 20px; /* Memberikan jarak antara pilihan Laki-laki dan Perempuan */
+    height: 42px; /* Menyamakan tinggi area dengan input text di sebelahnya */
+}
+
+/* Memastikan text dan lingkaran radio di dalam label sejajar murni */
+.radio-group label {
+    display: flex;
+    align-items: center; /* Membuat lingkaran bulat dan teks "Laki-laki/Perempuan" sejajar */
+    gap: 8px; /* Jarak antara lingkaran bulat dengan teksnya */
+    font-weight: 500;
+    color: #4a5568;
+    cursor: pointer;
+    margin-bottom: 0; /* Menghapus margin bawaan jika ada */
+}
+
+/* Opsional: Membuat ukuran lingkaran radio sedikit lebih proporsional */
+.radio-group input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #b7b89f; /* Menggunakan warna tema utama MiniBank kamu */
+}
+
+/* ============================================================
+   UPGRADE PREMIUM UI: DETAIL MURID (PREFIX: .dt-)
+   ============================================================ */
+
+.dt-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* ============================================================
+   UPGRADE: NAVIGASI KEMBALI PREMIUM (.dt-back-nav)
+   ============================================================ */
+
+.dt-back-nav {
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+}
+
+.dt-btn-back {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-decoration: none;
+    padding: 8px 16px 8px 8px;
+    border-radius: 12px;
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Kotak Ikon yang Responsif */
+.dt-btn-back .dt-icon-box {
+    width: 38px;
+    height: 38px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #718096;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s ease;
+}
+
+/* Detail Teks Bertingkat */
+.dt-nav-text {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.dt-nav-subtitle {
+    font-size: 11px;
+    color: #a0aec0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 2px;
+}
+
+.dt-nav-title {
+    font-size: 14px;
+    color: #4a5568;
+    font-weight: 700;
+    transition: color 0.2s ease;
+}
+
+/* --- EFEK HOVER INTERAKTIF --- */
+.dt-btn-back:hover {
+    background: rgba(
+        183,
+        184,
+        159,
+        0.08
+    ); /* Background tipis warna tema MiniBank */
+}
+
+.dt-btn-back:hover .dt-icon-box {
+    color: #ffffff;
+    background-color: #b7b89f; /* Kotak berganti warna tema saat di-hover */
+    border-color: #b7b89f;
+    transform: translateX(-4px); /* Ikon sedikit bergeser mundur */
+    box-shadow: 0 4px 12px rgba(183, 184, 159, 0.3);
+}
+
+.dt-btn-back:hover .dt-nav-title {
+    color: #1a202c; /* Teks utama menjadi lebih tegas */
+}
+
+/* Layout Grid System */
+.dt-layout-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+.dt-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #eef2f6;
+    box-shadow: 0 10px 25px rgba(149, 157, 165, 0.04);
+    overflow: hidden;
+    position: relative;
+}
+
+/* KARTU PROFIL (KIRI) */
+.dt-profile-card {
+    padding: 35px 25px;
+}
+
+.dt-profile-header-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: linear-gradient(90deg, #b7b89f, #cbd5e1);
+}
+
+.dt-avatar-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.dt-avatar-wrapper {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.dt-avatar-img {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dt-status-dot {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 14px;
+    height: 14px;
+    background-color: #38a169;
+    border: 2px solid #fff;
+    border-radius: 50%;
+}
+
+.dt-avatar-area h4 {
+    color: #1a202c;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.dt-sub-role {
+    font-size: 13px;
+    color: #a0aec0;
+    margin-top: 2px;
+}
+
+.dt-badge-kelas {
+    margin-top: 12px;
+    background: rgba(183, 184, 159, 0.12);
+    color: #83846c;
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.dt-info-separator {
+    height: 1px;
+    background: #edf2f7;
+    margin: 25px 0;
+}
+
+/* Info List Profil */
+.dt-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dt-info-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.dt-info-icon {
+    width: 38px;
+    height: 38px;
+    background: #f7fafc;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #a0aec0;
+    font-size: 15px;
+    border: 1px solid #edf2f7;
+}
+
+.dt-info-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.dt-label {
+    font-size: 11px;
+    color: #a0aec0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dt-value {
+    font-size: 14px;
+    color: #2d3748;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* SISI KANAN (AKUNTANSI) */
+.dt-main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+/* Card Tampilan Saldo Baru */
+.dt-balance-card-modern {
+    padding: 30px;
+    background: linear-gradient(135deg, #ffffff 0%, #fcfdfc 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 5px solid #b7b89f;
+}
+
+.dt-balance-left .dt-balance-meta {
+    font-size: 13px;
+    color: #718096;
+    font-weight: 600;
+}
+
+.dt-balance-left h2 {
+    font-size: 32px;
+    color: #1a202c;
+    font-weight: 700;
+    margin: 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.dt-balance-statement {
+    font-size: 12px;
+    color: #38a169;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Progress bar target */
+.dt-progress-circle-box {
+    text-align: right;
+    width: 160px;
+}
+
+.dt-progress-title {
+    font-size: 11px;
+    color: #a0aec0;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.dt-progress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #edf2f7;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.dt-progress-bar-fill {
+    height: 100%;
+    background: #b7b89f;
+    border-radius: 10px;
+}
+
+.dt-progress-percent {
+    font-size: 12px;
+    color: #4a5568;
+    font-weight: 600;
+    display: block;
+    margin-top: 6px;
+}
+
+/* Card Tabel Riwayat */
+.dt-history-card {
+    padding: 30px;
+}
+
+.dt-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dt-section-header h5 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a202c;
+}
+
+.dt-view-all {
+    font-size: 12px;
+    font-weight: 700;
+    color: #b7b89f;
+    background: rgba(183, 184, 159, 0.1);
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+/* List Item Transaksi Modern */
+.dt-list-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.dt-list-item {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #f1f4f8;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.dt-list-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    border-color: #e2e8f0;
+}
+
+.dt-icon-frame {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+}
+
+.frame-masuk {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+.frame-keluar {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.dt-item-details {
+    flex: 1;
+    margin-left: 16px;
+}
+
+.dt-item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.dt-item-date {
+    font-size: 12px;
+    color: #a0aec0;
+    margin-top: 2px;
+    display: block;
+}
+
+.dt-item-action-price {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.price-plus {
+    font-size: 15px;
+    font-weight: 700;
+    color: #16a34a;
+}
+.price-minus {
+    font-size: 15px;
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.status-success {
+    font-size: 11px;
+    font-weight: 600;
+    color: #a0aec0;
+}
+
+/* Responsive */
+@media (max-width: 850px) {
+    .dt-layout-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Styling Tombol Cetak PDF Premium */
+.dt-btn-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #ffffff;
+    color: #dc2626; /* Menggunakan aksen merah khas dokumen PDF */
+    border: 1px solid #fee2e2;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.03);
+    transition: all 0.2s ease;
+}
+
+.dt-btn-download:hover {
+    background-color: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+/* ========================================================
+   STYLING UNTUK LARAVEL PAGINATION (BOOTSTRAP MODE)
+======================================================== */
+.pagination {
+    display: flex;
+    padding-left: 0;
+    list-style: none;
+    gap: 5px;
+    margin: 0;
+    align-items: center;
+    justify-content: flex-end; /* Agar rata kanan */
+}
+
+.page-item .page-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    color: #4a5568;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    min-width: 35px;
+}
+
+.page-item .page-link:hover {
+    background-color: #f7fafc;
+    color: #2d3748;
+    border-color: #cbd5e0;
+}
+
+/* Warna halaman yang sedang aktif */
+.page-item.active .page-link {
+    z-index: 3;
+    color: #fff;
+    background-color: #2d3748; /* Warna abu gelap menyesuaikan tema MiniBank */
+    border-color: #2d3748;
+}
+
+/* Tombol Prev/Next saat berada di ujung (tidak bisa diklik) */
+.page-item.disabled .page-link {
+    color: #a0aec0;
+    pointer-events: none;
+    background-color: #f7fafc;
+    border-color: #e2e8f0;
+}
+
+/* ========================================================
+   CUSTOM SCROLLBAR UNTUK KOTAK AKTIVITAS (WEBKIT)
+======================================================== */
+.activity-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 10px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
+}
+
+.activity-list::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* ========================================================
+   STYLING UNTUK SELECT DROPDOWN (KELAS & JURUSAN)
+======================================================== */
+select.form-control {
+    /* Menghilangkan panah dan gaya bawaan OS */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    /* Mengganti dengan panah panah kustom (SVG) yang lebih elegan */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center; /* Posisi ikon panah di kanan */
+    background-size: 16px;
+
+    /* Jarak teks agar tidak menabrak ikon panah */
+    padding-right: 40px;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+/* Efek saat form select sedang diklik/dipilih */
+select.form-control:focus {
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+    outline: none;
+}
+
+/* Mengubah warna teks opsi di dalamnya */
+select.form-control option {
+    color: #2d3748;
+    padding: 10px;
+}
+
+/* ========================================================
+   PERBAIKAN TAMPILAN MOBILE (NAVBAR & SIDEBAR)
+======================================================== */
+
+/* Tombol default disembunyikan di layar besar (Desktop) */
+.burger-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: #4a5568;
+    cursor: pointer;
+    padding: 5px;
+    margin-right: 10px;
+    transition: color 0.2s;
+}
+
+@media screen and (max-width: 768px) {
+    /* --- 1. MERAPIHKAN NAVBAR --- */
+    .top-nav {
+        padding: 12px 15px !important;
+        gap: 10px;
+    }
+
+    .header-left {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+
+    /* Munculkan tombol burger di HP dengan rapi */
+    .burger-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Kecilkan ukuran form pencarian agar tidak menabrak profil */
+    .search-wrapper input {
+        width: 130px !important;
+        font-size: 13px !important;
+        padding: 6px 10px 6px 30px !important; /* Sesuaikan padding agar icon pas */
+    }
+
+    /* --- 2. MEMASTIKAN SIDEBAR BERFUNGSI --- */
+    .sidebar {
+        position: fixed !important;
+        top: 0;
+        left: -320px !important; /* Paksa sembunyi jauh di kiri */
+        width: 260px !important;
+        height: 100vh !important; /* Penuhi tinggi layar */
+        z-index: 99999 !important; /* Pastikan posisinya paling depan menutupi SEMUANYA */
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; /* Efek meluncur mulus */
+        background-color: #fff !important;
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.15) !important; /* Beri bayangan agar terlihat di atas konten */
+    }
+
+    /* Ini class kunci dari Javascript yang akan menarik sidebar masuk ke layar */
+    .sidebar.active {
+        left: 0 !important;
+    }
+
+    /* Munculkan tombol silang (X) di HP */
+    .close-sidebar-btn {
+        display: block !important;
+    }
+
+    /* --- 3. RESPONSIVE UNTUK KOTAK DASHBOARD --- */
+    /* Mengubah grid yang tadinya 3 atau 4 kolom menjadi 1 kolom di HP */
+    .dashboard-cards,
+    .summary-grid,
+    .card-container,
+    div[style*="grid-template-columns: repeat"] {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+
+    /* Memastikan kotak ringkasannya tidak melebar keluar batas */
+    .dashboard-card,
+    .summary-card,
+    .stat-card {
+        width: 100% !important;
+        margin-bottom: 15px;
+        box-sizing: border-box;
+    }
+
+    /* Jika ada grafik (chart) atau tabel di dashboard, pastikan tidak tumpah */
+    .chart-container,
+    .dashboard-table-wrapper {
+        width: 100% !important;
+        overflow-x: auto !important;
+    }
+    /* ========================================================
+       PERBAIKAN NAVBAR MOBILE (ANTI TABRAKAN)
+       ======================================================== */
+    .top-nav {
+        padding: 10px 12px !important;
+        gap: 5px !important;
+    }
+
+    /* 1. Sembunyikan Nama dan Role untuk menghemat ruang (Tampil Avatar saja) */
+    .user-info {
+        display: none !important;
+    }
+
+    /* 2. Kurangi jarak antar elemen di sebelah kanan (Notif & Profil) */
+    .header-right {
+        gap: 10px !important;
+    }
+    .user-profile {
+        gap: 5px !important;
+        padding: 4px !important; /* Kurangi padding kotak profil */
+    }
+
+    /* 3. Sesuaikan Form Pencarian di Navbar agar tidak mendesak Profil */
+    .header-left {
+        gap: 8px !important;
+        flex: 1; /* Biarkan sisi kiri fleksibel */
+    }
+    .search-wrapper {
+        width: 100%;
+        max-width: 150px; /* Batasi lebar maksimal di HP */
+    }
+    .search-wrapper input {
+        width: 100% !important;
+        font-size: 13px !important;
+        padding: 6px 10px 6px 30px !important;
+    }
+
+    /* 4. Sesuaikan ukuran Notifikasi */
+    .notif-wrapper i {
+        font-size: 1.1em !important;
+    }
+
+    /* 5. Geser Dropdown Notifikasi agar tidak keluar layar di HP */
+    #notif-dropdown {
+        width: 250px !important;
+        right: -50px !important; /* Geser sedikit agar pas di tengah layar HP */
+    }
+}
+
+/* ========================================================
+   UNIVERSAL RESPONSIVE (UNTUK SEMUA HALAMAN MINIBANK)
+======================================================== */
+@media screen and (max-width: 768px) {
+    /* 1. Area Konten Utama (Mengurangi jarak kosong di HP) */
+    .content,
+    .main-content-area {
+        padding: 10px !important;
+        width: 100% !important;
+        /* Mencegah layar HP goyang ke kanan-kiri */
+        overflow-x: hidden !important;
+    }
+
+    /* 2. Semua Elemen Grid (Dashboard Cards, Form Input, Pengaturan) */
+    /* Mengubah susunan yang berjejer ke samping menjadi menyusun ke bawah */
+    div[style*="grid-template-columns"],
+    .grid-container,
+    .dashboard-cards {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 15px !important;
+        width: 100% !important;
+    }
+
+    /* 3. Penyelamat Semua Tabel (Data Master, Transaksi, Riwayat, Report) */
+    /* Membuat tabel bisa di-scroll ke samping dengan mulus */
+    .table-container,
+    .table-card,
+    .records-container,
+    div[style*="overflow-x: auto"] {
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch; /* Efek scroll mulus di iOS */
+        margin-bottom: 20px;
+    }
+
+    /* Memaksa isi tabel tidak hancur/bertumpuk meski layar kecil */
+    table {
+        min-width: 700px !important;
+    }
+
+    /* 4. Area Header & Fitur Pencarian di Semua Halaman */
+    .table-controls,
+    .header-actions,
+    .table-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    .table-controls form,
+    .table-controls form input {
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    .header-actions a,
+    .header-actions button {
+        width: 100% !important;
+        text-align: center;
+        justify-content: center;
+    }
+
+    /* 5. Penyesuaian Ukuran Font Judul */
+    .content-header h1 {
+        font-size: 20px !important;
+    }
+    .content-header p {
+        font-size: 13px !important;
+    }
+
+    /* 6. Semua Kotak Putih (Card Form, Dashboard Box, Settings) */
+    .form-card,
+    .table-card,
+    .setting-card {
+        width: 100% !important;
+        padding: 15px !important;
+        box-sizing: border-box !important;
+    }
+}
