@@ -40,6 +40,14 @@ Route::middleware(['auth'])->group(function () {
     // 1. BISA DIAKSES OLEH SEMUA ROLE (Superadmin, Admin, Nasabah)
     // ============================================================
 
+    Route::get('/notifications/check', function () {
+        $count = \Illuminate\Support\Facades\DB::table('notifications')
+            ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+            ->where('is_read', 0)
+            ->count();
+        return response()->json(['count' => $count]);
+    })->name('notifications.check');
+
     // update by dean 28052026: Mengaktifkan dashboard dinamis via DashboardController agar data tabungan terhitung otomatis
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
@@ -51,7 +59,7 @@ Route::middleware(['auth'])->group(function () {
     // ============================================================
     // 2. KHUSUS GRUP SUPERADMIN & ADMIN TU (Pihak Sekolah/Bank)
     // ============================================================
-    Route::middleware(['role:superadmin,admin'])->group(function () {
+    Route::middleware(['role:superadmin,admin,admintu'])->group(function () {
 
         // update by dean 28052026: Mengarahkan rute master murid ke fungsi indexMurid agar dinamis
         Route::get('/master-murid', [SiswaController::class, 'indexMurid'])->name('murid.index');
@@ -59,6 +67,11 @@ Route::middleware(['auth'])->group(function () {
         // Rute untuk Tambah Murid (Manual)
         Route::get('/master-murid/tambah', [UserController::class, 'createMurid'])->name('siswa.create');
         Route::post('/master-murid/simpan', [UserController::class, 'storeMurid'])->name('siswa.store');
+
+        // =========================================================
+        // FITUR BARU: Rute untuk Import Excel Klien
+        // =========================================================
+        Route::post('/master-murid/import', [SiswaController::class, 'importExcel'])->name('murid.import');
 
         // Rute Detail Murid (Dinamis dengan ID)
         // update by dean 29052026

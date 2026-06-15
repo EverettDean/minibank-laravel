@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\SiswaImport;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,9 +27,11 @@ class SiswaController extends Controller
                 'users.id',
                 'users.name',
                 'nasabahs.nisn',
+                'nasabahs.nomor_rekening', // <--- TAMBAHKAN INI
                 'nasabahs.kelas',
                 'nasabahs.jurusan',
                 'nasabahs.no_telp',
+                'nasabahs.saldo_tabungan',
                 DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
                          FROM pengajuans 
                          WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui') as total_saldo")
@@ -41,7 +45,14 @@ class SiswaController extends Controller
             });
         }
 
-        $all_nasabah = $query->orderBy('nasabahs.kelas', 'asc')->orderBy('users.name', 'asc')->get();
+        // $all_nasabah = $query->orderBy('nasabahs.kelas', 'asc')->orderBy('users.name', 'asc')->get();
+        // 1. Gunakan paginate(10) alih-alih get()
+        $all_nasabah = $query->orderBy('nasabahs.kelas', 'asc')
+            ->orderBy('users.name', 'asc')
+            ->paginate(10); // <--- Tampilkan 10 data per halaman
+
+        // 2. Tambahkan appends() agar parameter search tetap terbawa saat pindah halaman
+        $all_nasabah->appends($request->query());
         return view('master_murid', compact('all_nasabah'));
     }
 
@@ -187,5 +198,19 @@ class SiswaController extends Controller
     {
         DB::table('users')->where('id', $id)->delete();
         return redirect()->route('murid.index')->with('success', 'Data murid berhasil dihapus!');
+    }
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file_excel' => 'required|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            Excel::import(new SiswaImport, $request->file('file_excel'));
+
+            return redirect()->back()->with('success', 'Data siswa berhasil di-import dari file Excel!');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['file_excel' => 'Gagal meng-import! Pastikan format kolom sudah benar (NO. REK, NAMA, KELAS, JURUSAN). Error: ' . $e->getMessage()]);
+        }
     }
 }

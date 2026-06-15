@@ -2,18 +2,31 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\NasabahApiController;
+use App\Http\Controllers\Api\AuthController;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Route Login (Bisa diakses publik untuk mendapatkan token)
+Route::post('/login', [AuthController::class, 'login']);
+
+// Route yang membutuhkan Token (Harus sudah Login)
+Route::middleware('auth:sanctum')->group(function () {
+
+    // Data User yang sedang login
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    // Fitur Nasabah
+    Route::get('/nasabah', [NasabahApiController::class, 'index']);
+
+    // Fitur Transaksi (Hanya bisa diakses jika ada token yang valid)
+    Route::post('/transaksi/{id}/setujui', [NasabahApiController::class, 'setujuiTransaksi']);
 });
+
+Route::post('/logout', [AuthController::class, 'logout']);

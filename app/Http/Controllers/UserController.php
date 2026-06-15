@@ -7,8 +7,8 @@ use App\Models\Nasabah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth; // Tambahkan ini untuk mempermudah deteksi user login
-use Barryvdh\DomPDF\Facade\Pdf; // <--- INI SANGAT PENTING UNTUK CETAK PDF
+use Illuminate\Support\Facades\Auth;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class UserController extends Controller
 {
@@ -39,7 +39,6 @@ class UserController extends Controller
             'username' => 'required|string|max:255|unique:users',
             'email'    => 'required|string|email|max:255|unique:users',
             'role'     => 'required|in:admin,nasabah',
-
             'kelas'    => 'required_if:role,nasabah',
             'jurusan'  => 'required_if:role,nasabah',
             'no_telp'  => 'required_if:role,nasabah',
@@ -65,9 +64,20 @@ class UserController extends Controller
             }
         });
 
-        // update by dean 28052026: Catat aktivitas pembuatan user baru oleh Superadmin
         $roleLabel = $request->role == 'admin' ? 'Admin TU' : 'Nasabah';
         $this->simpanLog('fa-user-plus', 'bg-blue', 'Menambahkan user baru dengan peran ' . $roleLabel . ' bernama ' . $request->name);
+
+        // ==========================================================
+        // FITUR BARU: KIRIM NOTIFIKASI KE DIRI SENDIRI (SUPERADMIN)
+        // ==========================================================
+        DB::table('notifications')->insert([
+            'user_id'    => Auth::user()->id,
+            'judul'      => 'Pengguna Baru Disimpan 👤',
+            'pesan'      => "Akun dengan nama {$request->name} (sebagai $roleLabel) telah sukses dibuat dan dimasukkan ke database.",
+            'is_read'    => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return redirect()->route('user.index')->with('success', 'Pengguna baru berhasil ditambahkan!');
     }
@@ -77,7 +87,6 @@ class UserController extends Controller
      */
     public function changePasswordForm()
     {
-        // Membuka file resources/views/superadmin/change_password.blade.php
         return view('superadmin.change_password');
     }
 
@@ -86,19 +95,14 @@ class UserController extends Controller
      */
     public function updatePassword(Request $request)
     {
-        // Validasi agar password baru minimal 4 karakter dan cocok dengan konfirmasi
         $request->validate([
             'password' => 'required|string|min:4|confirmed',
         ]);
 
-        // Mengambil data user yang sedang login saat ini
         $user = User::find(Auth::user()->id);
-
-        // Ganti password lama ('password123') menjadi password baru yang diinput
         $user->password = Hash::make($request->password);
         $user->save();
 
-        // Setelah sukses, lempar langsung ke halaman dashboard utama sistem
         return redirect()->route('dashboard.index')->with('success', 'Kata sandi akun Anda berhasil diperbarui!');
     }
 
@@ -122,40 +126,79 @@ class UserController extends Controller
         // Validasi input data dari form pengajuan
         $request->validate([
             'jenis_transaksi' => 'required|in:setor,tarik',
-            'nominal'         => 'required|numeric|min:1000', // Minimal pengajuan Rp 1.000
+            'nominal'         => 'required|numeric|min:1000',
             'keterangan'      => 'nullable|string|max:255',
         ]);
 
-        // Ambil ID user nasabah yang sedang aktif melakukan pengajuan
         $userId = Auth::user()->id;
+        $nasabahName = Auth::user()->name;
 
-        // Amankan penyimpanan transaksi menggunakan Query Builder langsung ke tabel 'pengajuans'
+        // ==========================================================
+        // FITUR BARU: CEK SALDO MENGENDAP (MINIMAL RP 50.000)
+        // ==========================================================
+        if ($request->jenis_transaksi == 'tarik') {
+            $total_setor = DB::table('pengajuans')->where('user_id', $userId)->where('status', 'disetujui')->where('jenis_transaksi', 'setor')->sum('nominal');
+            $total_tarik = DB::table('pengajuans')->where('user_id', $userId)->where('status', 'disetujui')->where('jenis_transaksi', 'tarik')->sum('nominal');
+            $pending_tarik = DB::table('pengajuans')->where('user_id', $userId)->where('status', 'pending')->where('jenis_transaksi', 'tarik')->sum('nominal');
+
+            $saldo_saat_ini = $total_setor - $total_tarik - $pending_tarik;
+
+            if (($saldo_saat_ini - $request->nominal) < 50000) {
+                $saldo_bisa_ditarik = max(0, $saldo_saat_ini - 50000);
+
+                return redirect()->back()->withErrors([
+                    'nominal' => 'Penarikan gagal! Harus tersisa Saldo Mengendap minimal Rp 50.000. Maksimal yang bisa Anda tarik saat ini adalah Rp ' . number_format($saldo_bisa_ditarik, 0, ',', '.')
+                ])->withInput();
+            }
+        }
+        // ==========================================================
+
+        // Simpan transaksi
         DB::table('pengajuans')->insert([
             'user_id'         => $userId,
             'jenis_transaksi' => $request->jenis_transaksi,
             'nominal'         => $request->nominal,
-            'status'          => 'pending', // Status awal default antrean aman
+            'status'          => 'pending',
             'keterangan'      => $request->keterangan,
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
 
-        // update by dean 28052026: Catat aktivitas pengajuan mandiri oleh Nasabah
         $this->simpanLog('fa-file-invoice-dollar', 'bg-blue', 'Membuat pengajuan ' . strtoupper($request->jenis_transaksi) . ' tunai sebesar Rp ' . number_format($request->nominal, 0, ',', '.'));
 
-        // Setelah berhasil dikirim, lempar kembali ke riwayat transaksi dengan flash session success
-        return redirect()->route('nasabah.transaksi')->with('success', 'Pengajuan transaksi berhasil dikirim! Menunggu konfirmasi Admin TU.');
+        // Kirim Notifikasi ke Admin TU
+        $semuaAdmin = DB::table('users')->where('role', 'admin')->get();
+        $jenis = strtoupper($request->jenis_transaksi);
+        $nominalRupiah = number_format($request->nominal, 0, ',', '.');
+
+        foreach ($semuaAdmin as $admin) {
+            DB::table('notifications')->insert([
+                'user_id'    => $admin->id,
+                'judul'      => 'Antrean ' . $jenis . ' Baru 🔔',
+                'pesan'      => "Nasabah $nasabahName telah mengajukan $jenis tunai sebesar Rp $nominalRupiah. Segera tinjau di panel transaksi.",
+                'is_read'    => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // ==========================================================
+        // PESAN SUKSES DINAMIS UNTUK POP-UP SWEETALERT2
+        // ==========================================================
+        $pesanSukses = $request->jenis_transaksi == 'setor'
+            ? "Berhasil mengajukan setoran sebesar Rp $nominalRupiah. Menunggu konfirmasi Admin TU."
+            : "Berhasil mengajukan penarikan sebesar Rp $nominalRupiah. Menunggu konfirmasi Admin TU.";
+
+        return redirect()->route('nasabah.transaksi')->with('success', $pesanSukses);
     }
 
     /**
      * 8. Menampilkan Halaman Riwayat Transaksi & Pengajuan Milik Nasabah
      */
-    // update by dean 28052026
     public function riwayatTransaksi(Request $request)
     {
         $query = DB::table('pengajuans')->where('user_id', Auth::user()->id);
 
-        // Cek apakah ada filter tanggal
         if ($request->filled('tanggal_mulai')) {
             $query->whereDate('created_at', '>=', $request->tanggal_mulai);
         }
@@ -178,7 +221,6 @@ class UserController extends Controller
      */
     public function indexPengajuanAdmin(Request $request)
     {
-        // 1. Mulai query dasar (Join tabel pengajuans, users, dan nasabahs)
         $query = DB::table('pengajuans')
             ->join('users', 'pengajuans.user_id', '=', 'users.id')
             ->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
@@ -188,7 +230,6 @@ class UserController extends Controller
                 'nasabahs.nisn'
             );
 
-        // 2. Logika Pencarian (Search) ditambahkan di sini
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
@@ -197,49 +238,96 @@ class UserController extends Controller
             });
         }
 
-        // 3. Eksekusi query dengan urutan: Pending di atas, lalu berdasarkan tanggal terbaru
         $all_pengajuan = $query->orderByRaw("FIELD(pengajuans.status, 'pending', 'disetujui', 'ditolak')")
             ->orderBy('pengajuans.created_at', 'desc')
-            // untuk setting banyaknya pagination
             ->paginate(5)
-            // Append query string agar saat pindah halaman (pagination), keyword pencarian tidak hilang
             ->withQueryString();
 
-        // 4. Lempar data ke view (Pastikan nama view sesuai dengan nama file Blade kamu)
         return view('superadmin.transaksi_petugas', compact('all_pengajuan'));
     }
 
     /**
      * 10. Aksi Mengubah Status Menjadi DISETUJUI + Pencatatan Log Petugas & Report Notifikasi Nasabah
      */
-    public function setujuiTransaksi($id)
+    // public function setujuiTransaksi($id)
+    // {
+    //     $pengajuan = DB::table('pengajuans')
+    //         ->join('users', 'pengajuans.user_id', '=', 'users.id')
+    //         ->where('pengajuans.id', $id)
+    //         ->select('users.name as nama_nasabah', 'pengajuans.user_id', 'pengajuans.jenis_transaksi', 'pengajuans.nominal')
+    //         ->first();
+
+    //     DB::table('pengajuans')->where('id', $id)->update([
+    //         'status'     => 'disetujui',
+    //         'updated_at' => now()
+    //     ]);
+
+    //     if ($pengajuan) {
+    //         $this->simpanLog('fa-money-bill-transfer', 'bg-green', 'Menyetujui pengajuan ' . strtoupper($pengajuan->jenis_transaksi) . ' tunai senilai Rp ' . number_format($pengajuan->nominal, 0, ',', '.') . ' milik nasabah ' . $pengajuan->nama_nasabah);
+
+    //         DB::table('notifications')->insert([
+    //             'user_id'    => $pengajuan->user_id,
+    //             'judul'      => 'Transaksi Disetujui 🎉',
+    //             'pesan'      => 'Pengajuan ' . strtoupper($pengajuan->jenis_transaksi) . ' tunai senilai Rp ' . number_format($pengajuan->nominal, 0, ',', '.') . ' telah sukses diverifikasi oleh petugas dan dibukukan ke saldo tabungan Anda.',
+    //             'is_read'    => false,
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ]);
+    //     }
+
+    //     return redirect()->back()->with('success', 'Transaksi berhasil disetujui! Saldo nasabah otomatis diperbarui.');
+    // }
+
+    public function setujuiTransaksi(Request $request, $id)
     {
-        // update by dean 28052026: Ambil detail data pengajuan terlebih dahulu untuk menyusun deskripsi log
+
+        $request->validate(['nama_petugas' => 'required|string']);
+        // 1. Ambil data pengajuan
         $pengajuan = DB::table('pengajuans')
             ->join('users', 'pengajuans.user_id', '=', 'users.id')
             ->where('pengajuans.id', $id)
             ->select('users.name as nama_nasabah', 'pengajuans.user_id', 'pengajuans.jenis_transaksi', 'pengajuans.nominal')
             ->first();
 
-        DB::table('pengajuans')->where('id', $id)->update([
-            'status'     => 'disetujui',
-            'updated_at' => now()
-        ]);
-
-        if ($pengajuan) {
-            // FIXED BY DEAN: Menggunakan properti nama_nasabah agar sinkron dengan alias select di atas
-            $this->simpanLog('fa-money-bill-transfer', 'bg-green', 'Menyetujui pengajuan ' . strtoupper($pengajuan->jenis_transaksi) . ' tunai senilai Rp ' . number_format($pengajuan->nominal, 0, ',', '.') . ' milik nasabah ' . $pengajuan->nama_nasabah);
-
-            // update by dean 28052026: Kirim report notifikasi internal langsung ke akun Nasabah terkait
-            DB::table('notifications')->insert([
-                'user_id'    => $pengajuan->user_id,
-                'judul'      => 'Transaksi Disetujui 🎉',
-                'pesan'      => 'Pengajuan ' . strtoupper($pengajuan->jenis_transaksi) . ' tunai senilai Rp ' . number_format($pengajuan->nominal, 0, ',', '.') . ' telah sukses diverifikasi oleh petugas dan dibukukan ke saldo tabungan Anda.',
-                'is_read'    => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        if (!$pengajuan) {
+            return redirect()->back()->with('error', 'Data transaksi tidak ditemukan.');
         }
+
+        // 2. Update saldo di tabel nasabahs menggunakan DB transaction agar aman
+        DB::transaction(function () use ($id, $pengajuan, $request) {
+            // Update status pengajuan
+            DB::table('pengajuans')->where('id', $id)->update([
+                'status'     => 'disetujui',
+                'nama_petugas' => $request->nama_petugas,
+                'updated_at' => now()
+            ]);
+
+            // Cari data nasabah berdasarkan user_id
+            $nasabah = \App\Models\Nasabah::where('user_id', $pengajuan->user_id)->first();
+
+            if ($nasabah) {
+                if ($pengajuan->jenis_transaksi == 'setor') {
+                    // Tambah saldo
+                    $nasabah->saldo_tabungan += $pengajuan->nominal;
+                } elseif ($pengajuan->jenis_transaksi == 'tarik') {
+                    // Kurangi saldo
+                    $nasabah->saldo_tabungan -= $pengajuan->nominal;
+                }
+                $nasabah->save();
+            }
+        });
+
+        // 3. Log dan Notifikasi (seperti kode aslimu)
+        $this->simpanLog('fa-money-bill-transfer', 'bg-green', 'Menyetujui pengajuan ' . strtoupper($pengajuan->jenis_transaksi) . ' tunai senilai Rp ' . number_format($pengajuan->nominal, 0, ',', '.') . ' milik nasabah ' . $pengajuan->nama_nasabah);
+
+        DB::table('notifications')->insert([
+            'user_id'    => $pengajuan->user_id,
+            'judul'      => 'Transaksi Disetujui 🎉',
+            'pesan'      => 'Pengajuan ' . strtoupper($pengajuan->jenis_transaksi) . ' tunai senilai Rp ' . number_format($pengajuan->nominal, 0, ',', '.') . ' telah sukses diverifikasi dan saldo Anda telah diperbarui.',
+            'is_read'    => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return redirect()->back()->with('success', 'Transaksi berhasil disetujui! Saldo nasabah otomatis diperbarui.');
     }
@@ -249,7 +337,6 @@ class UserController extends Controller
      */
     public function tolakTransaksi($id)
     {
-        // update by dean 28052026: Ambil detail data pengajuan terlebih dahulu untuk deskripsi log
         $pengajuan = DB::table('pengajuans')
             ->join('users', 'pengajuans.user_id', '=', 'users.id')
             ->where('pengajuans.id', $id)
@@ -262,10 +349,8 @@ class UserController extends Controller
         ]);
 
         if ($pengajuan) {
-            // FIXED BY DEAN: Menggunakan properti nama_nasabah agar sinkron dengan alias select di atas
             $this->simpanLog('fa-xmark', 'bg-red', 'Menolak pengajuan ' . strtoupper($pengajuan->jenis_transaksi) . ' tunai senilai Rp ' . number_format($pengajuan->nominal, 0, ',', '.') . ' milik nasabah ' . $pengajuan->nama_nasabah);
 
-            // update by dean 28052026: Kirim report notifikasi internal langsung ke akun Nasabah terkait
             DB::table('notifications')->insert([
                 'user_id'    => $pengajuan->user_id,
                 'judul'      => 'Transaksi Ditolak ❌',
@@ -280,20 +365,8 @@ class UserController extends Controller
     }
 
     /**
-     * 14. Menampilkan Halaman Form Edit User (Adaptif) - Update by Dean 28052026
+     * 14. Menampilkan Halaman Form Edit User (Adaptif)
      */
-    // public function edit($id)
-    // {
-    //     $user = User::findOrFail($id);
-
-    //     $nasabah = null;
-    //     if ($user->role == 'nasabah') {
-    //         $nasabah = DB::table('nasabahs')->where('user_id', $user->id)->first();
-    //     }
-
-    //     return view('superadmin.edit_user', compact('user', 'nasabah'));
-    // }
-
     public function edit($id)
     {
         $user = User::findOrFail($id);
@@ -303,16 +376,14 @@ class UserController extends Controller
             $nasabah = DB::table('nasabahs')->where('user_id', $user->id)->first();
         }
 
-        // TAMBAHKAN 2 BARIS INI: Ambil data untuk dropdown
         $kelas = DB::table('master_kelas')->orderBy('nama_kelas', 'asc')->get();
         $jurusans = DB::table('master_jurusans')->orderBy('nama_jurusan', 'asc')->get();
 
-        // JANGAN LUPA KIRIMKAN JUGA KE VIEW
         return view('superadmin.edit_user', compact('user', 'nasabah', 'kelas', 'jurusans'));
     }
 
     /**
-     * 15. Memproses Pembaruan Data User ke 2 Tabel + Pencatatan Log Audit - Update by Dean 28052026
+     * 15. Memproses Pembaruan Data User ke 2 Tabel + Pencatatan Log Audit
      */
     public function update(Request $request, $id)
     {
@@ -322,7 +393,6 @@ class UserController extends Controller
             'name'     => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users,username,' . $user->id,
             'email'    => 'required|string|email|max:255|unique:users,email,' . $user->id,
-
             'kelas'    => $user->role == 'nasabah' ? 'required|string' : 'nullable',
             'jurusan'  => $user->role == 'nasabah' ? 'required|string' : 'nullable',
             'no_telp'  => $user->role == 'nasabah' ? 'required|string' : 'nullable',
@@ -353,55 +423,183 @@ class UserController extends Controller
     }
 
     // ============================================================
-    // MENU REPORT (SUPERADMIN & ADMIN TU) - DITAMBAHKAN BARU
+    // MENU REPORT (SUPERADMIN & ADMIN TU)
     // ============================================================
 
     /**
      * 16. Menampilkan Halaman Laporan Filter Bulanan, Kelas, dan Jurusan
      */
+    // public function indexReport(Request $request)
+    // {
+    //     $data_kelas = DB::table('master_kelas')->orderBy('nama_kelas', 'asc')->get();
+    //     $data_jurusan = DB::table('master_jurusans')->orderBy('nama_jurusan', 'asc')->get();
+
+    //     $query = DB::table('users')
+    //         ->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
+    //         ->where('users.role', 'nasabah')
+    //         ->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan');
+
+    //     if ($request->filled('kelas') && $request->kelas != 'semua') {
+    //         $query->where('nasabahs.kelas', $request->kelas);
+    //     }
+    //     if ($request->filled('jurusan') && $request->jurusan != 'semua') {
+    //         $query->where('nasabahs.jurusan', $request->jurusan);
+    //     }
+
+    //     $bulan_pilihan = $request->filled('bulan') ? $request->bulan : date('m');
+    //     $tahun_pilihan = $request->filled('tahun') ? $request->tahun : date('Y');
+
+    //     $query->addSelect(DB::raw("(
+    //         SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
+    //         FROM pengajuans 
+    //         WHERE pengajuans.user_id = users.id 
+    //         AND pengajuans.status = 'disetujui'
+    //         AND MONTH(pengajuans.created_at) = '$bulan_pilihan'
+    //         AND YEAR(pengajuans.created_at) = '$tahun_pilihan'
+    //     ) as transaksi_bulan_ini"));
+
+    //     $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')
+    //         ->orderBy('users.name', 'asc')
+    //         ->paginate(25)
+    //         ->withQueryString();
+
+    //     return view('superadmin.report', compact('laporan_nasabah', 'data_kelas', 'data_jurusan', 'bulan_pilihan', 'tahun_pilihan'));
+    // }
+
+    // public function indexReport(Request $request)
+    // {
+    //     // 1. Inisialisasi Filter
+    //     $bulan = $request->filled('bulan') ? $request->bulan : date('m');
+    //     $tahun = $request->filled('tahun') ? $request->tahun : date('Y');
+    //     $tanggal = $request->tanggal;
+    //     $jenis = $request->jenis_transaksi;
+
+    //     // 2. Data Master
+    //     $data_kelas = DB::table('master_kelas')->orderBy('nama_kelas', 'asc')->get();
+    //     $data_jurusan = DB::table('master_jurusans')->orderBy('nama_jurusan', 'asc')->get();
+
+    //     // 3. Logika Filter String (Digunakan di Query Utama & Subquery)
+    //     $dateFilter = $tanggal
+    //         ? "AND DATE(pengajuans.created_at) = " . DB::getPdo()->quote($tanggal)
+    //         : "AND MONTH(pengajuans.created_at) = " . DB::getPdo()->quote($bulan) . " AND YEAR(pengajuans.created_at) = " . DB::getPdo()->quote($tahun);
+
+    //     $jenisFilter = ($jenis && $jenis != 'semua') ? "AND pengajuans.jenis_transaksi = " . DB::getPdo()->quote($jenis) : "";
+
+    //     // 4. Query Utama
+    //     $query = DB::table('users')
+    //         ->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
+    //         ->where('users.role', 'nasabah');
+
+    //     // Filter Kelas & Jurusan
+    //     if ($request->filled('kelas') && $request->kelas != 'semua') $query->where('nasabahs.kelas', $request->kelas);
+    //     if ($request->filled('jurusan') && $request->jurusan != 'semua') $query->where('nasabahs.jurusan', $request->jurusan);
+
+    //     // FILTER WAJIB: Hanya ambil nasabah yang memiliki transaksi sesuai filter
+    //     $query->whereRaw("EXISTS (SELECT 1 FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' $dateFilter $jenisFilter)");
+
+    //     // 5. Select & Subquery (Disesuaikan dengan filter)
+    //     $query->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan')
+    //         ->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
+    //         FROM pengajuans 
+    //         WHERE pengajuans.user_id = users.id 
+    //         AND pengajuans.status = 'disetujui' $dateFilter $jenisFilter) as transaksi_bulan_ini"))
+    //         ->addSelect(DB::raw("(SELECT COALESCE(SUM(nominal), 0) 
+    //         FROM pengajuans 
+    //         WHERE pengajuans.user_id = users.id 
+    //         AND pengajuans.status = 'disetujui' 
+    //         AND pengajuans.jenis_transaksi = 'tarik' 
+    //         AND pengajuans.keterangan LIKE 'Biaya Admin Bulanan%' $dateFilter) as total_biaya_admin"));
+
+    //     $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')
+    //         ->orderBy('users.name', 'asc')
+    //         ->paginate(10)
+    //         ->withQueryString();
+
+    //     return view('superadmin.report', compact(
+    //         'laporan_nasabah',
+    //         'data_kelas',
+    //         'data_jurusan',
+    //         'bulan',
+    //         'tahun',
+    //         'tanggal',
+    //         'jenis'
+    //     ));
+    // }
+
     public function indexReport(Request $request)
     {
-        // 1. Ambil data master untuk Dropdown Filter
+        // 1. Inisialisasi Filter
+        $bulan = $request->filled('bulan') ? $request->bulan : date('m');
+        $tahun = $request->filled('tahun') ? $request->tahun : date('Y');
+        $tglAwal = $request->tanggal_awal;
+        $tglAkhir = $request->tanggal_akhir;
+        $jenis = $request->jenis_transaksi;
+
+        // 2. Data Master
         $data_kelas = DB::table('master_kelas')->orderBy('nama_kelas', 'asc')->get();
         $data_jurusan = DB::table('master_jurusans')->orderBy('nama_jurusan', 'asc')->get();
 
-        // 2. Mulai Query Dasar (Ambil data Nasabah)
+        // 3. Logika Filter String
+        if ($tglAwal && $tglAkhir) {
+            $dateFilter = "AND DATE(pengajuans.created_at) BETWEEN " . DB::getPdo()->quote($tglAwal) . " AND " . DB::getPdo()->quote($tglAkhir);
+        } else {
+            $dateFilter = "AND MONTH(pengajuans.created_at) = " . DB::getPdo()->quote($bulan) . " AND YEAR(pengajuans.created_at) = " . DB::getPdo()->quote($tahun);
+        }
+
+        $jenisFilter = ($jenis && $jenis != 'semua') ? "AND pengajuans.jenis_transaksi = " . DB::getPdo()->quote($jenis) : "";
+
+        // 4. Query Utama
         $query = DB::table('users')
             ->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
-            ->where('users.role', 'nasabah')
-            ->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan');
+            ->where('users.role', 'nasabah');
 
-        // 3. LOGIKA FILTER KELAS & JURUSAN
-        if ($request->filled('kelas') && $request->kelas != 'semua') {
-            $query->where('nasabahs.kelas', $request->kelas);
+        // Filter Kelas & Jurusan
+        if ($request->filled('kelas') && $request->kelas != 'semua') $query->where('nasabahs.kelas', $request->kelas);
+        if ($request->filled('jurusan') && $request->jurusan != 'semua') $query->where('nasabahs.jurusan', $request->jurusan);
+
+        // --- LOGIKA FILTER DINAMIS ---
+        // Hanya gunakan EXISTS (menyaring nasabah) jika user memilih Jenis Transaksi spesifik (Tarik/Setor)
+        // Jika 'semua', maka EXISTS tidak dipasang agar nasabah Rp 0 tetap tampil
+        if ($jenis && $jenis != 'semua') {
+            $query->whereRaw("EXISTS (SELECT 1 FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' $dateFilter $jenisFilter)");
         }
-        if ($request->filled('jurusan') && $request->jurusan != 'semua') {
-            $query->where('nasabahs.jurusan', $request->jurusan);
-        }
 
-        // 4. LOGIKA FILTER BULAN (Default: Bulan Ini)
-        $bulan_pilihan = $request->filled('bulan') ? $request->bulan : date('m');
-        $tahun_pilihan = $request->filled('tahun') ? $request->tahun : date('Y');
+        // 5. Select & Subquery (Tetap menghitung nominal meskipun nasabah tidak punya transaksi)
+        $query->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan')
+            ->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
+                FROM pengajuans 
+                WHERE pengajuans.user_id = users.id 
+                AND pengajuans.status = 'disetujui' $dateFilter $jenisFilter) as transaksi_bulan_ini"))
+            ->addSelect(DB::raw("(SELECT COALESCE(SUM(nominal), 0) 
+                FROM pengajuans 
+                WHERE pengajuans.user_id = users.id 
+                AND pengajuans.status = 'disetujui' 
+                AND pengajuans.jenis_transaksi = 'tarik' 
+                AND pengajuans.keterangan LIKE 'Biaya Admin Bulanan%' $dateFilter) as total_biaya_admin"))
+            ->addSelect(DB::raw("(SELECT jenis_transaksi 
+                FROM pengajuans 
+                WHERE pengajuans.user_id = users.id 
+                AND pengajuans.status = 'disetujui' 
+                $dateFilter 
+                $jenisFilter 
+                ORDER BY created_at DESC LIMIT 1) as jenis_transaksi_terakhir"));
 
-        // Menambahkan Subquery untuk menghitung total transaksi di bulan yang difilter
-        $query->addSelect(DB::raw("(
-            SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
-            FROM pengajuans 
-            WHERE pengajuans.user_id = users.id 
-            AND pengajuans.status = 'disetujui'
-            AND MONTH(pengajuans.created_at) = '$bulan_pilihan'
-            AND YEAR(pengajuans.created_at) = '$tahun_pilihan'
-        ) as transaksi_bulan_ini"));
-
-        // 5. Eksekusi query dengan pagination
         $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')
             ->orderBy('users.name', 'asc')
-            ->paginate(25)
+            ->paginate(10)
             ->withQueryString();
 
-        return view('superadmin.report', compact('laporan_nasabah', 'data_kelas', 'data_jurusan', 'bulan_pilihan', 'tahun_pilihan'));
+        return view('superadmin.report', compact(
+            'laporan_nasabah',
+            'data_kelas',
+            'data_jurusan',
+            'bulan',
+            'tahun',
+            'tglAwal',
+            'tglAkhir',
+            'jenis'
+        ));
     }
-
     /**
      * 17. Helper Fungsi Otomatis untuk Mencatat Log Aktivitas ke Database
      */
@@ -423,16 +621,10 @@ class UserController extends Controller
      */
     public function indexNotifikasi()
     {
-        // Ambil notifikasi milik user yang login
         $notifikasis = DB::table('notifications')
             ->where('user_id', Auth::user()->id)
             ->orderBy('created_at', 'desc')
             ->get();
-
-        // Tandai semua notifikasi sudah dibaca
-        DB::table('notifications')
-            ->where('user_id', Auth::user()->id)
-            ->update(['is_read' => true]);
 
         return view('nasabah.notifikasi', compact('notifikasis'));
     }
@@ -453,30 +645,179 @@ class UserController extends Controller
     /**
      * 20. Ekspor Laporan ke PDF
      */
+    // public function exportReportPDF(Request $request)
+    // {
+    //     // date_default_timezone_set('Asia/Jakarta'); // Paksa PHP untuk menggunakan WIB
+    //     $query = DB::table('users')->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
+    //         ->where('users.role', 'nasabah')
+    //         ->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan');
+
+    //     if ($request->filled('kelas') && $request->kelas != 'semua') $query->where('nasabahs.kelas', $request->kelas);
+    //     if ($request->filled('jurusan') && $request->jurusan != 'semua') $query->where('nasabahs.jurusan', $request->jurusan);
+
+    //     $bulan_pilihan = $request->filled('bulan') ? $request->bulan : date('m');
+    //     $tahun_pilihan = $request->filled('tahun') ? $request->tahun : date('Y');
+
+    //     $query->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' AND MONTH(pengajuans.created_at) = '$bulan_pilihan' AND YEAR(pengajuans.created_at) = '$tahun_pilihan') as transaksi_bulan_ini"));
+
+    //     $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')->orderBy('users.name', 'asc')->get();
+
+    //     $pdf = Pdf::loadView('superadmin.report_cetak', compact('laporan_nasabah', 'bulan_pilihan', 'tahun_pilihan', 'request'));
+    //     $pdf->setPaper('A4', 'portrait');
+    //     return $pdf->download('Laporan_Nasabah_' . $bulan_pilihan . '_' . $tahun_pilihan . '.pdf');
+    // }
+
+    // public function exportReportPDF(Request $request)
+    // {
+    //     date_default_timezone_set('Asia/Jakarta');
+
+    //     // 1. Inisialisasi Filter
+    //     $bulan = $request->filled('bulan') ? $request->bulan : date('m');
+    //     $tahun = $request->filled('tahun') ? $request->tahun : date('Y');
+    //     $tanggal = $request->tanggal;
+    //     $jenis = $request->jenis_transaksi;
+
+    //     // 2. Base Query
+    //     $query = DB::table('users')
+    //         ->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
+    //         ->where('users.role', 'nasabah')
+    //         ->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan');
+
+    //     // 3. Filter Kelas & Jurusan
+    //     if ($request->filled('kelas') && $request->kelas != 'semua') $query->where('nasabahs.kelas', $request->kelas);
+    //     if ($request->filled('jurusan') && $request->jurusan != 'semua') $query->where('nasabahs.jurusan', $request->jurusan);
+
+    //     // 4. String Filter (Date & Jenis)
+    //     $dateFilter = $tanggal
+    //         ? "AND DATE(pengajuans.created_at) = " . DB::getPdo()->quote($tanggal)
+    //         : "AND MONTH(pengajuans.created_at) = " . DB::getPdo()->quote($bulan) . " AND YEAR(pengajuans.created_at) = " . DB::getPdo()->quote($tahun);
+
+    //     $jenisFilter = ($jenis && $jenis != 'semua') ? "AND pengajuans.jenis_transaksi = " . DB::getPdo()->quote($jenis) : "";
+
+    //     // 5. Filter Wajib (Agar nasabah tanpa transaksi hilang)
+    //     $query->whereRaw("EXISTS (SELECT 1 FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' $dateFilter $jenisFilter)");
+
+    //     // 6. Select dengan Filter Lengkap (Subqueries)
+    //     $query->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
+    //     FROM pengajuans 
+    //     WHERE pengajuans.user_id = users.id 
+    //     AND pengajuans.status = 'disetujui' 
+    //     $dateFilter $jenisFilter) as transaksi_bulan_ini"));
+
+    //     $query->addSelect(DB::raw("(SELECT COALESCE(SUM(nominal), 0) 
+    //     FROM pengajuans 
+    //     WHERE pengajuans.user_id = users.id 
+    //     AND pengajuans.status = 'disetujui' 
+    //     AND pengajuans.jenis_transaksi = 'tarik' 
+    //     AND pengajuans.keterangan LIKE 'Biaya Admin Bulanan%' 
+    //     $dateFilter $jenisFilter) as total_biaya_admin"));
+
+    //     $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')->orderBy('users.name', 'asc')->get();
+
+    //     // 7. Siapkan variabel untuk View
+    //     $bulan_pilihan = $bulan;
+    //     $tahun_pilihan = $tahun;
+
+    //     // 8. Load View PDF
+    //     $pdf = Pdf::loadView('superadmin.report_cetak', compact('laporan_nasabah', 'bulan_pilihan', 'tahun_pilihan'));
+
+    //     return $pdf->download('Laporan_Nasabah_' . ($tanggal ?? $bulan_pilihan . '_' . $tahun_pilihan) . '.pdf');
+    // }
+
     public function exportReportPDF(Request $request)
     {
-        $query = DB::table('users')->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
+        date_default_timezone_set('Asia/Jakarta');
+
+        // 1. Inisialisasi Filter
+        $bulan = $request->filled('bulan') ? $request->bulan : date('m');
+        $tahun = $request->filled('tahun') ? $request->tahun : date('Y');
+        $tglAwal = $request->tanggal_awal;
+        $tglAkhir = $request->tanggal_akhir;
+        $jenis = $request->jenis_transaksi;
+
+        // 2. Base Query
+        $query = DB::table('users')
+            ->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
             ->where('users.role', 'nasabah')
             ->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan');
 
+        // 3. Filter Kelas & Jurusan
         if ($request->filled('kelas') && $request->kelas != 'semua') $query->where('nasabahs.kelas', $request->kelas);
         if ($request->filled('jurusan') && $request->jurusan != 'semua') $query->where('nasabahs.jurusan', $request->jurusan);
 
-        $bulan_pilihan = $request->filled('bulan') ? $request->bulan : date('m');
-        $tahun_pilihan = $request->filled('tahun') ? $request->tahun : date('Y');
+        // 4. String Filter (Date Range & Jenis)
+        // Logika: Jika ada rentang tanggal, pakai BETWEEN. Jika tidak, pakai bulan/tahun.
+        if ($tglAwal && $tglAkhir) {
+            $dateFilter = "AND DATE(pengajuans.created_at) BETWEEN " . DB::getPdo()->quote($tglAwal) . " AND " . DB::getPdo()->quote($tglAkhir);
+        } else {
+            $dateFilter = "AND MONTH(pengajuans.created_at) = " . DB::getPdo()->quote($bulan) . " AND YEAR(pengajuans.created_at) = " . DB::getPdo()->quote($tahun);
+        }
 
-        $query->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' AND MONTH(pengajuans.created_at) = '$bulan_pilihan' AND YEAR(pengajuans.created_at) = '$tahun_pilihan') as transaksi_bulan_ini"));
+        $jenisFilter = ($jenis && $jenis != 'semua') ? "AND pengajuans.jenis_transaksi = " . DB::getPdo()->quote($jenis) : "";
+
+        // 5. Filter Wajib (Agar nasabah tanpa transaksi hilang)
+        $query->whereRaw("EXISTS (SELECT 1 FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' $dateFilter $jenisFilter)");
+
+        // 6. Select dengan Filter Lengkap (Subqueries)
+        $query->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
+        FROM pengajuans 
+        WHERE pengajuans.user_id = users.id 
+        AND pengajuans.status = 'disetujui' 
+        $dateFilter $jenisFilter) as transaksi_bulan_ini"));
+
+        $query->addSelect(DB::raw("(SELECT COALESCE(SUM(nominal), 0) 
+        FROM pengajuans 
+        WHERE pengajuans.user_id = users.id 
+        AND pengajuans.status = 'disetujui' 
+        AND pengajuans.jenis_transaksi = 'tarik' 
+        AND pengajuans.keterangan LIKE 'Biaya Admin Bulanan%' 
+        $dateFilter $jenisFilter) as total_biaya_admin"));
 
         $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')->orderBy('users.name', 'asc')->get();
 
-        $pdf = Pdf::loadView('superadmin.report_cetak', compact('laporan_nasabah', 'bulan_pilihan', 'tahun_pilihan', 'request'));
-        $pdf->setPaper('A4', 'portrait');
-        return $pdf->download('Laporan_Nasabah_' . $bulan_pilihan . '_' . $tahun_pilihan . '.pdf');
-    }
+        // 7. Siapkan variabel untuk View
+        $bulan_pilihan = $bulan;
+        $tahun_pilihan = $tahun;
 
+        // 8. Load View PDF
+        $pdf = Pdf::loadView('superadmin.report_cetak', compact(
+            'laporan_nasabah',
+            'bulan_pilihan',
+            'tahun_pilihan',
+            'tglAwal',
+            'tglAkhir'
+        ));
+
+        // Membuat nama file lebih deskriptif berdasarkan filter yang aktif
+        $fileName = 'Laporan_Nasabah_' . ($tglAwal ? $tglAwal . '_sd_' . $tglAkhir : $bulan_pilihan . '_' . $tahun_pilihan) . '.pdf';
+
+        return $pdf->download($fileName);
+    }
     /**
      * 21. Ekspor Laporan ke Excel
      */
+    // public function exportReportExcel(Request $request)
+    // {
+    //     $query = DB::table('users')->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
+    //         ->where('users.role', 'nasabah')
+    //         ->select('users.id', 'users.name', 'nasabahs.nisn', 'nasabahs.kelas', 'nasabahs.jurusan');
+
+    //     if ($request->filled('kelas') && $request->kelas != 'semua') $query->where('nasabahs.kelas', $request->kelas);
+    //     if ($request->filled('jurusan') && $request->jurusan != 'semua') $query->where('nasabahs.jurusan', $request->jurusan);
+
+    //     $bulan_pilihan = $request->filled('bulan') ? $request->bulan : date('m');
+    //     $tahun_pilihan = $request->filled('tahun') ? $request->tahun : date('Y');
+
+    //     $query->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' AND MONTH(pengajuans.created_at) = '$bulan_pilihan' AND YEAR(pengajuans.created_at) = '$tahun_pilihan') as transaksi_bulan_ini"));
+
+    //     $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')->orderBy('users.name', 'asc')->get();
+
+    //     header("Content-type: application/vnd-ms-excel");
+    //     header("Content-Disposition: attachment; filename=Laporan_Nasabah_" . $bulan_pilihan . "_" . $tahun_pilihan . ".xls");
+
+    //     return view('superadmin.report_cetak', compact('laporan_nasabah', 'bulan_pilihan', 'tahun_pilihan', 'request'));
+    // }
+
     public function exportReportExcel(Request $request)
     {
         $query = DB::table('users')->join('nasabahs', 'users.id', '=', 'nasabahs.user_id')
@@ -489,11 +830,26 @@ class UserController extends Controller
         $bulan_pilihan = $request->filled('bulan') ? $request->bulan : date('m');
         $tahun_pilihan = $request->filled('tahun') ? $request->tahun : date('Y');
 
-        $query->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) FROM pengajuans WHERE pengajuans.user_id = users.id AND pengajuans.status = 'disetujui' AND MONTH(pengajuans.created_at) = '$bulan_pilihan' AND YEAR(pengajuans.created_at) = '$tahun_pilihan') as transaksi_bulan_ini"));
+        // 1. Subquery Transaksi (Setor - Tarik)
+        $query->addSelect(DB::raw("(SELECT COALESCE(SUM(CASE WHEN jenis_transaksi = 'setor' THEN nominal WHEN jenis_transaksi = 'tarik' THEN -nominal ELSE 0 END), 0) 
+        FROM pengajuans 
+        WHERE pengajuans.user_id = users.id 
+        AND pengajuans.status = 'disetujui' 
+        AND MONTH(pengajuans.created_at) = '$bulan_pilihan' 
+        AND YEAR(pengajuans.created_at) = '$tahun_pilihan') as transaksi_bulan_ini"));
+
+        // 2. Subquery Biaya Admin (KOLOM INI YANG TADI MENGAKIBATKAN ERROR)
+        $query->addSelect(DB::raw("(SELECT COALESCE(SUM(nominal), 0) 
+        FROM pengajuans 
+        WHERE pengajuans.user_id = users.id 
+        AND pengajuans.status = 'disetujui' 
+        AND pengajuans.jenis_transaksi = 'tarik' 
+        AND pengajuans.keterangan LIKE 'Biaya Admin Bulanan%' 
+        AND MONTH(pengajuans.created_at) = '$bulan_pilihan' 
+        AND YEAR(pengajuans.created_at) = '$tahun_pilihan') as total_biaya_admin"));
 
         $laporan_nasabah = $query->orderBy('nasabahs.kelas', 'asc')->orderBy('users.name', 'asc')->get();
 
-        // Trik memaksa browser mengunduh HTML sebagai file Excel
         header("Content-type: application/vnd-ms-excel");
         header("Content-Disposition: attachment; filename=Laporan_Nasabah_" . $bulan_pilihan . "_" . $tahun_pilihan . ".xls");
 

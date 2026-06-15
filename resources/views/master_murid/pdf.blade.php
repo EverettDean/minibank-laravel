@@ -108,7 +108,10 @@
         <tr>
             <td><strong>Tanggal Cetak</strong></td>
             <td>:</td>
-            <td>{{ \Carbon\Carbon::now()->format('d M Y H:i') }}</td>
+            <!-- update tutup by dean 01062026 -->
+            <!-- <td>{{ \Carbon\Carbon::now()->format('d M Y H:i') }}</td> -->
+            <!-- update by dean 01062026 -->
+            <td>{{ \Carbon\Carbon::now('Asia/Jakarta')->format('d M Y H:i') }}</td>
         </tr>
     </table>
 

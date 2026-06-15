@@ -35,20 +35,20 @@
                             <div class="input-group" style="margin-bottom: 20px;">
                                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #4a5568; font-size: 14px;">Jenis Transaksi <span style="color: #e53e3e;">*</span></label>
                                 <select name="jenis_transaksi" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 14px; background-color: #fff; box-sizing: border-box;">
-                                    <option value="" disabled selected>-- Pilih Jenis Transaksi --</option>
-                                    <option value="setor">Setor Tunai (Menabung)</option>
-                                    <option value="tarik">Tarik Tunai (Mengambil Uang)</option>
+                                    <option value="" disabled {{ old('jenis_transaksi') ? '' : 'selected' }}>-- Pilih Jenis Transaksi --</option>
+                                    <option value="setor" {{ old('jenis_transaksi') == 'setor' ? 'selected' : '' }}>Setor Tunai (Menabung)</option>
+                                    <option value="tarik" {{ old('jenis_transaksi') == 'tarik' ? 'selected' : '' }}>Tarik Tunai (Mengambil Uang)</option>
                                 </select>
                             </div>
 
                             <div class="input-group" style="margin-bottom: 20px;">
                                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #4a5568; font-size: 14px;">Nominal Transaksi (Rp) <span style="color: #e53e3e;">*</span></label>
-                                <input type="number" name="nominal" placeholder="Contoh: 50000" min="1000" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 14px; box-sizing: border-box;">
+                                <input type="number" name="nominal" value="{{ old('nominal') }}" placeholder="Contoh: 50000" min="1000" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 14px; box-sizing: border-box;">
                             </div>
 
                             <div class="input-group" style="margin-bottom: 25px;">
                                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #4a5568; font-size: 14px;">Catatan / Keterangan (Opsional)</label>
-                                <textarea name="keterangan" placeholder="Contoh: Tabungan mingguan atau keperluan jajan sekolah..." style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 14px; min-height: 80px; box-sizing: border-box; resize: vertical;"></textarea>
+                                <textarea name="keterangan" placeholder="Contoh: Tabungan mingguan atau keperluan jajan sekolah..." style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 14px; min-height: 80px; box-sizing: border-box; resize: vertical;">{{ old('keterangan') }}</textarea>
                             </div>
 
                             <div style="display: flex; gap: 12px; justify-content: flex-end;">
@@ -65,6 +65,36 @@
     </div>
 
     <script src="{{ asset('assets/js/javascript.js') }}"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+
+            // 1. POP-UP GAGAL 
+            @error('nominal')
+            Swal.fire({
+                title: 'Transaksi Gagal!',
+                text: "{!! $message !!}",
+                icon: 'error',
+                confirmButtonColor: '#e53e3e',
+                confirmButtonText: 'Tutup'
+            });
+            @enderror
+
+            // 2. POP-UP BERHASIL
+            @if(session('success'))
+            Swal.fire({
+                title: 'Berhasil!',
+                text: "{!! session('success') !!}",
+                icon: 'success',
+                confirmButtonColor: '#3182ce',
+                confirmButtonText: 'Oke, Mengerti'
+            });
+            @endif
+
+        });
+    </script>
 </body>
 
 </html>

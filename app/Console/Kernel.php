@@ -15,7 +15,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Menjadwalkan perintah pemotongan biaya admin bulanan
+        // Akan dijalankan secara otomatis setiap tanggal 1 jam 00:00
+        $schedule->command('minibank:potong-admin')->monthlyOn(1, '00:00');
     }
 
     /**
@@ -25,7 +27,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

@@ -63,6 +63,7 @@
                                         <th style="padding: 15px; color: #4a5568; font-weight: 600;">Nominal</th>
                                         <th style="padding: 15px; color: #4a5568; font-weight: 600;">Keterangan</th>
                                         <th style="padding: 15px; color: #4a5568; font-weight: 600;">Status</th>
+                                        <th style="padding: 15px; color: #4a5568; font-weight: 600;">Petugas</th>
                                         <th style="padding: 15px; color: #4a5568; font-weight: 600; text-align: center;">Aksi Validasi</th>
                                     </tr>
                                 </thead>
@@ -91,13 +92,19 @@
                                             <span style="background-color: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 50px; font-size: 12px; font-weight: 600;">Ditolak</span>
                                             @endif
                                         </td>
+                                        <td style="padding: 15px;">
+                                            <strong style="color: #2d3748; display: block;">{{ $item->nama_petugas }}</strong>
+                                        </td>
                                         <td style="padding: 15px; text-align: center;">
                                             @if($item->status == 'pending')
                                             <div style="display: inline-flex; gap: 8px; justify-content: center; align-items: center;">
                                                 <form action="{{ route('admin.transaksi.setujui', $item->id) }}" method="POST" style="margin: 0;">
                                                     @csrf
-                                                    <button type="submit" style="background-color: #16a34a; color: #fff; border: none; padding: 8px 14px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <!-- <button type="submit" style="background-color: #16a34a; color: #fff; border: none; padding: 8px 14px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
                                                         <i class="fa-solid fa-check"></i> Setuju
+                                                    </button> -->
+                                                    <button type="button" onclick="bukaModal({{ $item->id }})" style="background-color: #16a34a; color: #fff; border: none; padding: 8px 14px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                                        <i class=" fa-solid fa-check"></i> Setuju
                                                     </button>
                                                 </form>
 
@@ -138,8 +145,46 @@
             </main>
         </div>
     </div>
+    <div id="modalSetuju" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:white; padding:20px; border-radius:8px; width:300px;">
+            <h3>Konfirmasi Petugas</h3>
+            <form id="formSetuju" method="POST">
+                @csrf
+                <label>Nama Petugas:</label>
+                <input type="text" name="nama_petugas" required style="width:100%; padding:8px; margin:10px 0;">
+                <div style="text-align:right; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button"
+                        onclick="document.getElementById('modalSetuju').style.display='none'; document.getElementById('formSetuju').reset();"
+                        style="background:#dc2626; color:white; border:none; padding:8px 16px; border-radius:4px; font-weight:600; cursor:pointer;">
+                        Batal
+                    </button>
+
+                    <button type="submit"
+                        style="background:#16a34a; color:white; border:none; padding:8px 16px; border-radius:4px; font-weight:600; cursor:pointer;">
+                        Simpan & Setujui
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function bukaModal(id) {
+            // Mencegah aksi default browser (seperti submit form yang tidak disengaja)
+            event.preventDefault();
+
+            // Menggunakan route() agar URL otomatis terbentuk
+            let url = "{{ route('admin.transaksi.setujui', ':id') }}";
+            url = url.replace(':id', id);
+
+            document.getElementById('formSetuju').action = url;
+            document.getElementById('modalSetuju').style.display = 'flex';
+        }
+    </script>
 
     <script src="{{ asset('assets/js/javascript.js') }}"></script>
+
+
 </body>
 
 </html>

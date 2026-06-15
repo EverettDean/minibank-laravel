@@ -14,12 +14,13 @@ class Nasabah extends Model
 
     // Mendaftarkan kolom yang boleh diisi melalui Form/Database
     protected $fillable = [
-        'user_id', // Daftarkan user_id di sini
+        'user_id',
         'nisn',
+        'nomor_rekening', // Ganti no_rek menjadi nomor_rekening
         'kelas',
         'jurusan',
-        'no_telp',
-        'saldo_tabungan'
+        'saldo_tabungan',
+        'no_telp'
     ];
 
     // ============================================================

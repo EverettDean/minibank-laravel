@@ -22,6 +22,7 @@ class MasterDataSeeder extends Seeder
             ['nama_kelas' => 'X', 'created_at' => $now, 'updated_at' => $now],
             ['nama_kelas' => 'XI', 'created_at' => $now, 'updated_at' => $now],
             ['nama_kelas' => 'XII', 'created_at' => $now, 'updated_at' => $now],
+            ['nama_kelas' => 'GURU', 'created_at' => $now, 'updated_at' => $now],
         ];
 
         // Kosongkan tabel dulu agar tidak dobel jika dijalankan ulang (Opsional)
@@ -35,8 +36,8 @@ class MasterDataSeeder extends Seeder
             ['nama_jurusan' => 'MPLB', 'created_at' => $now, 'updated_at' => $now],
             ['nama_jurusan' => 'AKL', 'created_at' => $now, 'updated_at' => $now],
             ['nama_jurusan' => 'PH', 'created_at' => $now, 'updated_at' => $now],
-            ['nama_jurusan' => 'BCF', 'created_at' => $now, 'updated_at' => $now],
-            ['nama_jurusan' => 'PPLG', 'created_at' => $now, 'updated_at' => $now],
+            ['nama_jurusan' => 'GHAMCAK', 'created_at' => $now, 'updated_at' => $now],
+            ['nama_jurusan' => 'LAINNYA', 'created_at' => $now, 'updated_at' => $now],
         ];
 
         // Kosongkan tabel dulu agar tidak dobel jika dijalankan ulang (Opsional)

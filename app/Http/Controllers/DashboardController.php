@@ -60,16 +60,20 @@ class DashboardController extends Controller
             ->join('users', 'activity_logs.user_id', '=', 'users.id')
             ->select('activity_logs.*', 'users.name as nama_pelaku')
             ->orderBy('activity_logs.created_at', 'desc')
-            ->limit(5);
+            ->limit(10);
 
         if ($user->role == 'superadmin') {
+            // superadmin melihat smeua log
             $logs = $query_log->get();
         } elseif ($user->role == 'admin') {
+            // Admin melihat log sistem atau admin lainnya
             $logs = $query_log->where('activity_logs.role', 'admin')->get();
         } else {
+            // Nasabah: filter berdasarkan user_id nasabah yang login
             $logs = $query_log->where('activity_logs.user_id', $user->id)->get();
         }
 
+        // dd($logs);
         return view('dashboard', compact('metrics', 'logs'));
     }
 }

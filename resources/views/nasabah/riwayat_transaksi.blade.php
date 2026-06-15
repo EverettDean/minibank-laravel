@@ -132,6 +132,23 @@
     </div>
 
     <script src="{{ asset('assets/js/javascript.js') }}"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // 2. POP-UP BERHASIL
+            @if(session('success'))
+            Swal.fire({
+                title: 'Berhasil!',
+                text: "{!! session('success') !!}",
+                icon: 'success',
+                confirmButtonColor: '#3182ce',
+                confirmButtonText: 'Oke, Mengerti'
+            });
+            @endif
+        });
+    </script>
 </body>
 
 </html>
