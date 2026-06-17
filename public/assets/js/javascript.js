@@ -48,7 +48,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (notifDropdown) {
             const isVisible = notifDropdown.style.display === "block";
             notifDropdown.style.display = isVisible ? "none" : "block";
-
             if (dropdownKelas) dropdownKelas.classList.remove("active");
             if (menuProfile) menuProfile.classList.remove("show");
         }
@@ -76,7 +75,6 @@ document.addEventListener("DOMContentLoaded", function () {
             notifDropdown.style.display = "none";
         if (dropdownKelas) dropdownKelas.classList.remove("active");
         if (menuProfile) menuProfile.classList.remove("show");
-
         if (
             sidebar &&
             sidebar.classList.contains("active") &&
@@ -103,9 +101,43 @@ document.addEventListener("DOMContentLoaded", function () {
             timeout = setTimeout(() => searchForm.submit(), 500);
         });
     }
+
+    // --- 9. INISIALISASI NOTIFIKASI ---
+    checkNotifications();
+    setInterval(checkNotifications, 30000); // Cek setiap 30 detik
 });
 
-// --- 9. LOGIKA TANDAI SEMUA DIBACA ---
+// --- FUNGSI GLOBAL ---
+
+// Logika Notifikasi Terpusat
+function checkNotifications() {
+    fetch("/notifications/check", {
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            Accept: "application/json",
+        },
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            // Update badge kelas .notif-badge (di sidebar/bell)
+            const badges = document.querySelectorAll(".notif-badge");
+            badges.forEach((badge) => {
+                badge.innerText = data.count > 0 ? data.count : "";
+                badge.style.display = data.count > 0 ? "block" : "none";
+            });
+
+            // Update ID notif-count (di navbar)
+            const badgeById = document.getElementById("notif-count");
+            if (badgeById) {
+                badgeById.innerText = data.count > 0 ? data.count : "";
+                badgeById.style.display =
+                    data.count > 0 ? "inline-block" : "none";
+            }
+        })
+        .catch((err) => console.error("Gagal cek notifikasi:", err));
+}
+
+// Logika Tandai Semua Dibaca
 function tandaiSemuaDibaca(btn) {
     const originalText = btn.innerHTML;
     const targetUrl = btn.getAttribute("data-url");
@@ -137,38 +169,3 @@ function tandaiSemuaDibaca(btn) {
             btn.disabled = false;
         });
 }
-
-// --- 10. LOGIKA AUTO-REFRESH NOTIFIKASI (POLLING) ---
-function autoCheckNotifikasi() {
-    // untuk debug js
-    console.log("Mengecek notifikasi baru..");
-    fetch("/notifications/check")
-        .then((res) => res.json())
-        .then((data) => {
-            const badge = document.querySelector(".notif-badge");
-
-            if (data.count > 0) {
-                // Jika sudah ada badge, update angkanya
-                if (badge) {
-                    badge.innerText = data.count;
-                    badge.style.display = "block";
-                } else {
-                    // Jika belum ada badge, tambahkan secara dinamis
-                    const bell = document.querySelector(".fa-bell");
-                    const newBadge = document.createElement("span");
-                    newBadge.className = "notif-badge";
-                    newBadge.style.cssText =
-                        "position: absolute; top: -8px; right: -8px; background: #e53e3e; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold;";
-                    newBadge.innerText = data.count;
-                    bell.parentElement.appendChild(newBadge);
-                }
-            } else {
-                // Jika tidak ada notif baru, sembunyikan badge
-                if (badge) badge.style.display = "none";
-            }
-        })
-        .catch((err) => console.error("Gagal cek notifikasi:", err));
-}
-
-// Jalankan pengecekan setiap 10 detik (30000 milidetik)
-setInterval(autoCheckNotifikasi, 10000);

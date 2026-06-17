@@ -56,6 +56,7 @@
                                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #4a5568; font-size: 14px;">Hak Akses (Role) <span style="color: #e53e3e;">*</span></label>
                                 <select name="role" id="role-select" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 14px; background-color: #fff; color: #2d3748;">
                                     <option value="" disabled selected>-- Pilih Hak Akses Pengguna --</option>
+                                    <option value="superadmin">Superadmin</option>
                                     <option value="admin">Admin TU</option>
                                     <option value="nasabah">Nasabah</option>
                                 </select>

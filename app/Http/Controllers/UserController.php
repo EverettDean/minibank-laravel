@@ -38,7 +38,7 @@ class UserController extends Controller
             'name'     => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users',
             'email'    => 'required|string|email|max:255|unique:users',
-            'role'     => 'required|in:admin,nasabah',
+            'role'     => 'required|in:admin,nasabah,superadmin',
             'kelas'    => 'required_if:role,nasabah',
             'jurusan'  => 'required_if:role,nasabah',
             'no_telp'  => 'required_if:role,nasabah',
@@ -95,14 +95,18 @@ class UserController extends Controller
      */
     public function updatePassword(Request $request)
     {
+        // 1. Validasi Input
         $request->validate([
             'password' => 'required|string|min:4|confirmed',
         ]);
 
-        $user = User::find(Auth::user()->id);
+        // 2. Update Password menggunakan instance user yang sedang login
+        // Menggunakan Auth::user() lebih singkat daripada User::find(Auth::id())
+        $user = Auth::user();
         $user->password = Hash::make($request->password);
         $user->save();
 
+        // 3. Berikan feedback sukses
         return redirect()->route('dashboard.index')->with('success', 'Kata sandi akun Anda berhasil diperbarui!');
     }
 
@@ -855,4 +859,49 @@ class UserController extends Controller
 
         return view('superadmin.report_cetak', compact('laporan_nasabah', 'bulan_pilihan', 'tahun_pilihan', 'request'));
     }
+
+    // 22. Menampilkan halaman profil
+    public function profile()
+    {
+        return view('superadmin.profile');
+    }
+
+    // 23. Update data profile (Nama & Email)
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
+
+        return back()->with('success', 'Profil berhasil diperbarui!');
+    }
+
+    // 24. Update password
+    // public function updatePassword(Request $request)
+    // {
+    //     $user = auth()->user();
+
+    //     $request->validate([
+    //         'current_password' => 'required',
+    //         'new_password' => 'required|min:6|confirmed',
+    //     ]);
+
+    //     if (!Hash::check($request->current_password, $user->password)) {
+    //         return back()->withErrors(['current_password' => 'Password saat ini tidak benar']);
+    //     }
+
+    //     $user->update([
+    //         'password' => Hash::make($request->new_password),
+    //     ]);
+
+    //     return back()->with('success', 'Password berhasil diperbarui!');
+    // }
 }

@@ -142,7 +142,7 @@
             <i class="fa-solid fa-chevron-down dropdown-icon"></i>
 
             <div class="profile-menu" id="dropdownMenu">
-                <a href="#">
+                <a href="{{ route('profile.index') }}">
                     <i class="fa-solid fa-user-gear"></i>
                     <span>Pengaturan Profile</span>
                 </a>

@@ -5,36 +5,27 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon; // Pastikan Carbon dipanggil untuk mempermudah manipulasi tanggal
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    /**
-     * Mengatur Tampilan Konten Dashboard Utama Secara Dinamis Sesuai Role
-     */
     public function index(Request $request)
     {
         $user = Auth::user();
         $metrics = [];
+        $riwayat = []; // Inisialisasi agar tidak error di view
 
-        // --- AMBIL PARAMETER BULAN DARI REQUEST ATAU GUNAKAN BULAN SAAT INI ---
-        // Format yang kita pakai di dropdown adalah 'mm-yyyy', misal '05-2026'
+        // --- AMBIL PARAMETER BULAN ---
         $bulanPilihan = $request->input('bulan', now()->format('m-Y'));
-
-        // Pecah menjadi variabel bulan (05) dan tahun (2026)
         list($bulan, $tahun) = explode('-', $bulanPilihan);
-
-        // Simpan ke metrics agar bisa dipanggil di blade untuk menandai <option selected>
         $metrics['bulan_pilihan'] = $bulanPilihan;
 
-        // 1. Logika perhitungan metrik dinamis
+        // 1. LOGIKA METRIK
         if ($user->role == 'superadmin' || $user->role == 'admin') {
-            // A. Saldo Global (Seluruh Waktu)
             $total_setor = DB::table('pengajuans')->where('status', 'disetujui')->where('jenis_transaksi', 'setor')->sum('nominal');
             $total_tarik = DB::table('pengajuans')->where('status', 'disetujui')->where('jenis_transaksi', 'tarik')->sum('nominal');
             $metrics['total_dana_sekolah'] = $total_setor - $total_tarik;
 
-            // B. Pemasukan (Setor) KHUSUS di bulan dan tahun yang dipilih
             $metrics['pemasukan_bulan_ini'] = DB::table('pengajuans')
                 ->where('status', 'disetujui')
                 ->where('jenis_transaksi', 'setor')
@@ -46,16 +37,20 @@ class DashboardController extends Controller
             $metrics['antrean_pending'] = DB::table('pengajuans')->where('status', 'pending')->count();
             $metrics['total_staff'] = DB::table('users')->where('role', 'admin')->count();
         } else {
-            // Logika Nasabah tetap seperti semula
+            // Logika Nasabah
             $my_setor = DB::table('pengajuans')->where('user_id', $user->id)->where('status', 'disetujui')->where('jenis_transaksi', 'setor')->sum('nominal');
             $my_tarik = DB::table('pengajuans')->where('user_id', $user->id)->where('status', 'disetujui')->where('jenis_transaksi', 'tarik')->sum('nominal');
             $metrics['saldo_pribadi'] = $my_setor - $my_tarik;
-            $metrics['total_transaksi_saya'] = DB::table('pengajuans')->where('user_id', $user->id)->count();
+
+            // Ambil riwayat untuk nasabah
+            $riwayat = DB::table('pengajuans')
+                ->where('user_id', $user->id)
+                ->latest()
+                ->take(1)
+                ->get();
         }
 
-        // ============================================================
-        // SEKTOR PENYARINGAN LOG
-        // ============================================================
+        // 2. SEKTOR PENYARINGAN LOG (Diletakkan di luar IF agar DRY - Don't Repeat Yourself)
         $query_log = DB::table('activity_logs')
             ->join('users', 'activity_logs.user_id', '=', 'users.id')
             ->select('activity_logs.*', 'users.name as nama_pelaku')
@@ -63,17 +58,15 @@ class DashboardController extends Controller
             ->limit(10);
 
         if ($user->role == 'superadmin') {
-            // superadmin melihat smeua log
             $logs = $query_log->get();
         } elseif ($user->role == 'admin') {
-            // Admin melihat log sistem atau admin lainnya
-            $logs = $query_log->where('activity_logs.role', 'admin')->get();
+            // Asumsi: admin melihat log yang role-nya admin (sesuaikan logika filter Anda)
+            $logs = $query_log->where('users.role', 'admin')->get();
         } else {
-            // Nasabah: filter berdasarkan user_id nasabah yang login
             $logs = $query_log->where('activity_logs.user_id', $user->id)->get();
         }
 
-        // dd($logs);
-        return view('dashboard', compact('metrics', 'logs'));
+        // 3. SATU RETURN VIEW
+        return view('dashboard', compact('metrics', 'riwayat', 'logs'));
     }
 }

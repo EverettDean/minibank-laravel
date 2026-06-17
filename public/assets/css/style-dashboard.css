@@ -1746,6 +1746,59 @@ select.form-control option {
         width: 100% !important;
         overflow-x: auto !important;
     }
+
+    .profile-card {
+        background: #fff;
+        padding: 30px;
+        border-radius: 15px;
+        border: 1px solid #edf2f7;
+        transition: transform 0.2s;
+    }
+    .profile-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    }
+    .card-title {
+        margin-bottom: 25px !important;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        font-weight: 700;
+        color: #2d3748;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .btn-save {
+        transition: 0.3s;
+        width: 100%;
+        border: none;
+        font-weight: 600;
+        padding: 12px;
+        cursor: pointer;
+    }
+    .btn-save:hover {
+        opacity: 0.9;
+    }
+
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 25px;
+    }
+
+    /* Menambahkan jarak antara Label dan Input */
+    .form-group label {
+        display: block;
+        margin-bottom: 25px !important; /* Ini akan menambah jarak menjadi lebih lega */
+        font-weight: 600;
+        color: #4a5568;
+        line-height: 1.2;
+    }
+
+    /* Opsional: Memberi jarak bawah pada setiap form-group agar antar field tidak terlalu dempet */
+    .form-group {
+        margin-bottom: 25px;
+    }
     /* ========================================================
        PERBAIKAN NAVBAR MOBILE (ANTI TABRAKAN)
        ======================================================== */

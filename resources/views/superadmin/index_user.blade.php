@@ -29,8 +29,13 @@
                         <p>Kelola Tingkat Hak Akses <span class="highlight-user">Sistem Akuntansi</span></p>
                     </div>
 
-                    <div style="margin-top: -10px;">
+                    <!-- <div style="margin-top: -10px;">
                         <a href="/tambah-user" class="view-all-btn" style="background-color: #2d3748; color: #ffffff; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; transition: background 0.2s;">
+                            <i class="fa-solid fa-user-shield"></i> Tambah User Baru
+                        </a>
+                    </div> -->
+                    <div style="margin-top: -10px;">
+                        <a href="{{ route('user.create') }}" class="view-all-btn" style="background-color: #2d3748; color: #ffffff; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; transition: background 0.2s;">
                             <i class="fa-solid fa-user-shield"></i> Tambah User Baru
                         </a>
                     </div>

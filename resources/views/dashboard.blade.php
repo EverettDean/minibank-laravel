@@ -27,9 +27,10 @@
                         </p>
                     </div>
                 </header>
-
                 <section class="stats-grid">
+                    {{-- A. BAGIAN SUPERADMIN & ADMIN --}}
                     @if(Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')
+                    {{-- Total Siswa --}}
                     <div class="stat-card" style="border-left: 4px solid #3182ce;">
                         <div class="stat-content">
                             <p class="stat-label">Total Siswa</p>
@@ -39,6 +40,8 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Staff TU --}}
                     <div class="stat-card" style="border-left: 4px solid #38a169;">
                         <div class="stat-content">
                             <p class="stat-label">Staff TU</p>
@@ -50,6 +53,33 @@
                     </div>
                     @endif
 
+                    {{-- B. BAGIAN KHUSUS SUPERADMIN (SALDO) --}}
+                    @if(Auth::user()->role == 'superadmin')
+                    <div class="stat-card" style="border-left: 4px solid #3182ce;">
+                        <div class="stat-content">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <p class="stat-label" style="margin: 0;">Total Saldo Keseluruhan</p>
+                                <form action="{{ route('dashboard.index') }}" method="GET" id="formFilterBulan">
+                                    <select name="bulan" onchange="this.form.submit()" style="padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 11px; background: #f8fafc; color: #4a5568; outline: none; cursor: pointer;">
+                                        <option value="06-2026" {{ $metrics['bulan_pilihan'] == '06-2026' ? 'selected' : '' }}>Jun 2026</option>
+                                        <option value="05-2026" {{ $metrics['bulan_pilihan'] == '05-2026' ? 'selected' : '' }}>Mei 2026</option>
+                                        <option value="04-2026" {{ $metrics['bulan_pilihan'] == '04-2026' ? 'selected' : '' }}>Apr 2026</option>
+                                        <option value="03-2026" {{ $metrics['bulan_pilihan'] == '03-2026' ? 'selected' : '' }}>Mar 2026</option>
+                                    </select>
+                                </form>
+                            </div>
+                            <div class="value-container" style="margin-top: 10px;">
+                                <h3 class="stat-value">Rp {{ number_format($metrics['total_dana_sekolah'], 0, ',', '.') }}</h3>
+                                <div class="stat-icon-box" style="background: #ebf8ff; color: #3182ce;"><i class="fa-solid fa-vault"></i></div>
+                            </div>
+                            <span class="stat-desc" style="color: #16a34a; font-weight: 500;">
+                                <i class="fa-solid fa-arrow-trend-up"></i> + Rp {{ number_format($metrics['pemasukan_bulan_ini'], 0, ',', '.') }}
+                            </span>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- C. BAGIAN NASABAH --}}
                     @if(Auth::user()->role == 'nasabah')
                     <div class="stat-card" style="border-left: 4px solid #d69e2e;">
                         <div class="stat-content">
@@ -69,11 +99,33 @@
                             </div>
                         </div>
                     </div>
+                    <div class="stat-card" style="border-left: 4px solid #805ad5; grid-column: span 2; margin-top: 20px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <h4 style="margin: 0 0 15px 0; color: #2d3748;">Riwayat Transaksi Terakhir</h4>
+
+                        <table style="width: 100%; border-collapse: collapse;">
+                            @forelse($riwayat as $t)
+                            <tr style="border-bottom: 1px solid #edf2f7;">
+                                <td style="padding: 10px 0;">
+                                    <div style="font-size: 13px; font-weight: 600;">{{ ucfirst($t->jenis_transaksi) }}</div>
+                                    <div style="font-size: 11px; color: #718096;">{{ \Carbon\Carbon::parse($t->created_at)->format('d M Y, H:i') }}</div>
+                                </td>
+                                <td style="text-align: right; font-weight: 600; color: {{ $t->jenis_transaksi == 'setor' ? '#38a169' : '#e53e3e' }};">
+                                    {{ $t->jenis_transaksi == 'setor' ? '+' : '-' }} Rp {{ number_format($t->nominal, 0, ',', '.') }}
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="2" style="text-align: center; color: #a0aec0; padding: 20px;">Belum ada transaksi tercatat.</td>
+                            </tr>
+                            @endforelse
+                        </table>
+                    </div>
                     @endif
 
+                    {{-- D. ANTREAN PENDING (ADMIN/SUPERADMIN) --}}
                     @if(Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')
-                    <a href="{{ route('admin.transaksi.index') }}" style="text-decoration:none;">
-                        <div class="stat-card" style="border-left: 4px solid #dd6b20;">
+                    <a href="{{ route('admin.transaksi.index') }}" style="text-decoration:none; display:block;">
+                        <div class="stat-card" style="border-left: 4px solid #dd6b20; height: 100%;">
                             <div class="stat-content">
                                 <p class="stat-label">Antrean Pending</p>
                                 <div class="value-container">
